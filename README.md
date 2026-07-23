@@ -1,26 +1,34 @@
 # Gatehouse — Property Management System
 
-A full-featured property management dashboard built as a single React component: liquid-glass sidebar navigation, dashboard KPIs, properties, units, tenants, leases, maintenance kanban, payments (KSh), and reports.
+A full-featured property management dashboard: liquid-glass sidebar navigation, dashboard KPIs, properties, units, tenants, leases, maintenance kanban, payments (KSh), and reports.
 
-## Contents
-- `PropertyManagementSystem.jsx` — the complete app (React + Tailwind + lucide-react + recharts)
+This is a ready-to-run **Vite + React + Tailwind** app.
 
-## Running it
-This component is designed to drop into a React project that already has Tailwind CSS, `lucide-react`, and `recharts` configured (e.g. Vite or Next.js).
-
+## Local development
 ```bash
-npm install lucide-react recharts
+npm install
+npm run dev
 ```
 
-Then import and render the default export:
-
-```jsx
-import PropertyManagementSystem from "./PropertyManagementSystem.jsx";
-
-export default function App() {
-  return <PropertyManagementSystem />;
-}
+## Production build
+```bash
+npm run build   # outputs static files to dist/
+npm start       # serves dist/ (respects $PORT, defaults to 3000)
 ```
+
+## Deploying (Railway, etc.)
+This repo has a `package.json` with `build` and `start` scripts, so platforms like Railway/Render/Nixpacks will detect it automatically:
+1. `npm install`
+2. `npm run build`
+3. `npm start` (binds to `$PORT`)
+
+No extra configuration is required.
+
+## Structure
+- `src/PropertyManagementSystem.jsx` — the app itself
+- `src/main.jsx` — React entry point
+- `src/index.css` — Tailwind directives
+- `index.html`, `vite.config.js`, `tailwind.config.js`, `postcss.config.js` — build tooling
 
 ## Features
 - Collapsible sidebar with grouped navigation and a liquid-glass animated background
@@ -28,3 +36,4 @@ export default function App() {
 - Properties, Units, Tenants (with detail drawer), Leases, Maintenance (kanban), Payments, Reports, Settings
 - Currency formatted in Kenyan Shillings (KSh)
 - Synthesized UI click sound on interactive elements
+
