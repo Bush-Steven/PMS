@@ -326,6 +326,8 @@ function StatusBadge({ status }) {
     High: ["badge-amber", AlertTriangle, "High"],
     Medium: ["badge-blue", Clock, "Medium"],
     Low: ["badge-gray", Clock, "Low"],
+    "Moved Out": ["badge-gray", CheckCircle2, "Moved Out"],
+    Ended: ["badge-gray", CheckCircle2, "Ended"],
   };
   const [cls, Icon, label] = map[status] || ["badge-gray", Clock, status];
   return <span className={`badge ${cls}`}><Icon size={11} strokeWidth={2.5} />{label}</span>;
@@ -379,6 +381,9 @@ export default function PropertyManagementSystem() {
   const [maintenanceItems, setMaintenanceItems] = useState(maintenance);
   const [addTenantOpen, setAddTenantOpen] = useState(false);
   const [presetUnitId, setPresetUnitId] = useState(null);
+  const [addUnitOpen, setAddUnitOpen] = useState(false);
+  const [addWorkOrderOpen, setAddWorkOrderOpen] = useState(false);
+  const [recordPaymentOpen, setRecordPaymentOpen] = useState(false);
   const navRef = useRef(null);
   const itemRefs = useRef({});
   const [pillStyle, setPillStyle] = useState({ top: 0, height: 0, opacity: 0 });
@@ -406,6 +411,45 @@ export default function PropertyManagementSystem() {
     goTo("tenants");
   };
 
+  const addUnit = ({ propertyId, unitNumber, beds, baths, sqft, rent }) => {
+    const id = `u${Date.now()}`;
+    setUnitsState(list => [...list, { id, propertyId, unitNumber, beds, baths, sqft, rent, status: "vacant", tenantId: null, leaseId: null }]);
+    setAddUnitOpen(false);
+    goTo("units");
+  };
+
+  const addWorkOrder = ({ unitId, title, category, priority, assigned }) => {
+    const id = `m${Date.now()}`;
+    setMaintenanceItems(list => [...list, { id, unitId, title, category, priority, status: "Open", created: "2026-07-24", assigned: assigned || "Unassigned" }]);
+    setAddWorkOrderOpen(false);
+  };
+
+  const recordPayment = ({ paymentId, method }) => {
+    const pay = paymentsState.find(p => p.id === paymentId);
+    if (!pay) return;
+    setPaymentsState(list => list.map(p => p.id === paymentId ? { ...p, status: "Paid", method, date: "2026-07-24" } : p));
+    setTenantsState(list => list.map(t => t.id === pay.tenantId ? { ...t, status: "Current", balance: 0 } : t));
+    setRecordPaymentOpen(false);
+  };
+
+  const renewLease = (leaseId, termMonths) => {
+    setLeasesState(list => list.map(l => {
+      if (l.id !== leaseId) return l;
+      const base = daysUntil(l.end) > 0 ? l.end : "2026-07-24";
+      return { ...l, end: addMonths(base, termMonths), status: "Active" };
+    }));
+  };
+
+  const vacateTenant = (tenantId) => {
+    const tenant = tenantsState.find(t => t.id === tenantId);
+    if (!tenant) return;
+    setUnitsState(list => list.map(u => u.id === tenant.unitId ? { ...u, status: "vacant", tenantId: null, leaseId: null } : u));
+    setLeasesState(list => list.map(l => l.id === tenant.leaseId ? { ...l, status: "Ended" } : l));
+    setTenantsState(list => list.map(t => t.id === tenantId ? { ...t, status: "Moved Out" } : t));
+    setDrawerTenant(null);
+    goTo("units");
+  };
+
   useEffect(() => {
     const measure = () => {
       const el = itemRefs.current[section];
@@ -426,6 +470,15 @@ export default function PropertyManagementSystem() {
     e.currentTarget.style.setProperty("--mx", `${((e.clientX - r.left) / r.width) * 100}%`);
     e.currentTarget.style.setProperty("--my", `${((e.clientY - r.top) / r.height) * 100}%`);
   };
+
+  const addActions = {
+    properties: { label: "Add property", onClick: () => setAddOpen(true) },
+    units: { label: "Add unit", onClick: () => setAddUnitOpen(true) },
+    tenants: { label: "Register tenant", onClick: () => setAddTenantOpen(true) },
+    maintenance: { label: "Add work order", onClick: () => setAddWorkOrderOpen(true) },
+    payments: { label: "Record payment", onClick: () => setRecordPaymentOpen(true) },
+  };
+  const addAction = addActions[section] || null;
 
   const kpis = useMemo(() => {
     const occupied = unitsState.filter(u => u.status === "occupied" || u.status === "notice").length;
@@ -536,9 +589,11 @@ export default function PropertyManagementSystem() {
             />
           </div>
           <div className="ml-auto flex items-center gap-2 relative">
-            <button onClick={() => (section === "tenants" ? setAddTenantOpen(true) : setAddOpen(true))} className="btn-brass rounded-lg px-3 py-2 fs-13 font-semibold flex items-center gap-1.5">
-              <Plus size={15} /> <span className="hidden sm:inline">{section === "tenants" ? "Register tenant" : "Add"}</span>
-            </button>
+            {addAction && (
+              <button onClick={addAction.onClick} className="btn-brass rounded-lg px-3 py-2 fs-13 font-semibold flex items-center gap-1.5">
+                <Plus size={15} /> <span className="hidden sm:inline">{addAction.label}</span>
+              </button>
+            )}
             <button onClick={() => setNotifOpen(o => !o)} className="btn-outline rounded-lg p-2 relative">
               <Bell size={16} />
               {alerts.length > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full fs-9 font-bold flex items-center justify-center text-white" style={{ background: "var(--red)" }}>{alerts.length}</span>}
@@ -572,15 +627,15 @@ export default function PropertyManagementSystem() {
           {section === "properties" && <PropertiesView query={query} localProperties={localProperties} goTo={goTo} units={unitsState} />}
           {section === "units" && <UnitsView query={query} pendingFilter={pendingFilter} units={unitsState} propertyMap={propertyMap} tenantMap={tenantMap} onRegisterTenant={(unitId) => { setPresetUnitId(unitId); setAddTenantOpen(true); }} />}
           {section === "tenants" && <TenantsView query={query} onOpen={setDrawerTenant} tenants={tenantsState} propertyMap={propertyMap} unitMap={unitMap} onRegister={() => setAddTenantOpen(true)} />}
-          {section === "leases" && <LeasesView query={query} pendingFilter={pendingFilter} leases={leasesState} tenantMap={tenantMap} unitMap={unitMap} propertyMap={propertyMap} />}
+          {section === "leases" && <LeasesView query={query} pendingFilter={pendingFilter} leases={leasesState} tenantMap={tenantMap} unitMap={unitMap} propertyMap={propertyMap} onRenew={renewLease} />}
           {section === "maintenance" && <MaintenanceView query={query} pendingFilter={pendingFilter} items={maintenanceItems} setItems={setMaintenanceItems} unitMap={unitMap} propertyMap={propertyMap} />}
           {section === "payments" && <PaymentsView query={query} pendingFilter={pendingFilter} payments={paymentsState} tenantMap={tenantMap} propertyMap={propertyMap} />}
-          {section === "reports" && <ReportsView properties={localProperties} units={unitsState} />}
+          {section === "reports" && <ReportsView properties={localProperties} units={unitsState} tenants={tenantsState} payments={paymentsState} />}
           {section === "settings" && <SettingsView />}
         </main>
       </div>
 
-      {drawerTenant && <TenantDrawer tenant={drawerTenant} onClose={() => setDrawerTenant(null)} propertyMap={propertyMap} unitMap={unitMap} leases={leasesState} payments={paymentsState} />}
+      {drawerTenant && <TenantDrawer tenant={drawerTenant} onClose={() => setDrawerTenant(null)} propertyMap={propertyMap} unitMap={unitMap} leases={leasesState} payments={paymentsState} onVacate={vacateTenant} />}
       {addOpen && <AddPropertyModal onClose={() => setAddOpen(false)} onAdd={(p) => { setLocalProperties(list => [...list, p]); setAddOpen(false); goTo("properties"); }} />}
       {addTenantOpen && (
         <AddTenantModal
@@ -590,6 +645,15 @@ export default function PropertyManagementSystem() {
           onClose={() => { setAddTenantOpen(false); setPresetUnitId(null); }}
           onSave={registerTenant}
         />
+      )}
+      {addUnitOpen && (
+        <AddUnitModal properties={localProperties} onClose={() => setAddUnitOpen(false)} onAdd={addUnit} />
+      )}
+      {addWorkOrderOpen && (
+        <AddWorkOrderModal units={unitsState} propertyMap={propertyMap} onClose={() => setAddWorkOrderOpen(false)} onAdd={addWorkOrder} />
+      )}
+      {recordPaymentOpen && (
+        <RecordPaymentModal payments={paymentsState} tenantMap={tenantMap} onClose={() => setRecordPaymentOpen(false)} onSave={recordPayment} />
       )}
     </div>
   );
@@ -865,7 +929,7 @@ function TenantsView({ query, onOpen, tenants, propertyMap, unitMap, onRegister 
   );
 }
 
-function TenantDrawer({ tenant, onClose, propertyMap, unitMap, leases, payments }) {
+function TenantDrawer({ tenant, onClose, propertyMap, unitMap, leases, payments, onVacate }) {
   const p = propertyMap[tenant.propertyId], u = unitMap[tenant.unitId], l = leases.find(x => x.id === tenant.leaseId);
   const history = payments.filter(pay => pay.tenantId === tenant.id);
   return (
@@ -893,7 +957,7 @@ function TenantDrawer({ tenant, onClose, propertyMap, unitMap, leases, payments 
           <div className="flex justify-between fs-13 mb-1"><span className="c-muted">Rent</span><span className="font-medium">{fmtMoney(l.rent)}/mo</span></div>
           <div className="flex justify-between fs-13"><span className="c-muted">Status</span><StatusBadge status={l.status} /></div>
         </div>
-        <div className="card p-3">
+        <div className="card p-3 mb-4">
           <div className="fs-12 font-semibold c-muted uppercase tracking-wide mb-2">Payment history</div>
           {history.map(h => (
             <div key={h.id} className="flex justify-between items-center py-1.5 border-t divider first:border-t-0 fs-13">
@@ -903,13 +967,18 @@ function TenantDrawer({ tenant, onClose, propertyMap, unitMap, leases, payments 
             </div>
           ))}
         </div>
+        {l.status === "Ending — Notice Given" && (
+          <button onClick={() => onVacate(tenant.id)} className="btn-outline rounded-lg py-2.5 fs-135 font-semibold w-full">
+            Mark unit vacated
+          </button>
+        )}
       </div>
     </div>
   );
 }
 
 /* ============================= LEASES ============================= */
-function LeasesView({ query, pendingFilter, leases, tenantMap, unitMap, propertyMap }) {
+function LeasesView({ query, pendingFilter, leases, tenantMap, unitMap, propertyMap, onRenew }) {
   const [statusFilter, setStatusFilter] = useState(pendingFilter?.status || "all");
   useEffect(() => { if (pendingFilter?.status) setStatusFilter(pendingFilter.status); }, [pendingFilter]);
   const q = query.trim().toLowerCase();
@@ -934,11 +1003,12 @@ function LeasesView({ query, pendingFilter, leases, tenantMap, unitMap, property
       </div>
       <div className="overflow-x-auto">
         <table className="w-full pms-table">
-          <thead><tr className="text-left"><th className="py-2.5 pl-4">Tenant</th><th>Property / Unit</th><th>Term</th><th>Rent</th><th>Ends in</th><th>Status</th></tr></thead>
+          <thead><tr className="text-left"><th className="py-2.5 pl-4">Tenant</th><th>Property / Unit</th><th>Term</th><th>Rent</th><th>Ends in</th><th>Status</th><th></th></tr></thead>
           <tbody>
             {list.map(l => {
               const t = tenantMap[l.tenantId], u = unitMap[l.unitId], p = propertyMap[l.propertyId];
               const d = daysUntil(l.end);
+              const canRenew = l.status === "Expiring Soon" || l.status === "Ending — Notice Given";
               return (
                 <tr key={l.id} className="row-hover border-t divider">
                   <td className="py-2.5 pl-4 font-medium fs-135">{t.name}</td>
@@ -947,6 +1017,13 @@ function LeasesView({ query, pendingFilter, leases, tenantMap, unitMap, property
                   <td className="fs-13 font-medium">{fmtMoney(l.rent)}</td>
                   <td className="fs-13" style={{ color: d <= 30 ? "var(--red)" : d <= 60 ? "var(--amber)" : "var(--muted)" }}>{d} days</td>
                   <td><StatusBadge status={l.status} /></td>
+                  <td className="pr-4">
+                    {canRenew && (
+                      <button onClick={() => onRenew(l.id, 12)} className="btn-outline rounded-full px-2.5 py-1 fs-115 font-medium whitespace-nowrap">
+                        Renew 12mo
+                      </button>
+                    )}
+                  </td>
                 </tr>
               );
             })}
@@ -1078,38 +1155,120 @@ function PaymentsView({ query, pendingFilter, payments, tenantMap, propertyMap }
 }
 
 /* ============================= REPORTS ============================= */
-function ReportsView({ properties, units }) {
+function ReportsView({ properties, units, tenants, payments }) {
   const data = properties.map(p => {
     const pu = units.filter(u => u.propertyId === p.id);
     const occ = pu.filter(u => u.tenantId).length;
     const revenue = pu.filter(u => u.tenantId).reduce((s, u) => s + u.rent, 0);
-    return { name: p.name.split(" ")[0], occRate: Math.round((occ / pu.length) * 100), revenue };
+    const propertyTenantIds = tenants.filter(t => t.propertyId === p.id).map(t => t.id);
+    const propertyPayments = payments.filter(pay => propertyTenantIds.includes(pay.tenantId));
+    const billed = propertyPayments.reduce((s, pay) => s + pay.amount, 0);
+    const collected = propertyPayments.filter(pay => pay.status === "Paid").reduce((s, pay) => s + pay.amount, 0);
+    const collectionRate = billed > 0 ? Math.round((collected / billed) * 100) : 100;
+    return {
+      id: p.id, name: p.name.split(" ")[0], fullName: p.name,
+      occRate: pu.length ? Math.round((occ / pu.length) * 100) : 0,
+      revenue, units: pu.length, occ, collectionRate,
+      avgRent: occ > 0 ? Math.round(revenue / occ) : 0,
+    };
   });
+
+  const totalBilled = payments.reduce((s, p) => s + p.amount, 0);
+  const totalCollected = payments.filter(p => p.status === "Paid").reduce((s, p) => s + p.amount, 0);
+  const overallCollectionRate = totalBilled > 0 ? Math.round((totalCollected / totalBilled) * 100) : 100;
+  const totalOccupied = units.filter(u => u.tenantId).length;
+  const avgRentPerUnit = totalOccupied > 0 ? Math.round(units.filter(u => u.tenantId).reduce((s, u) => s + u.rent, 0) / totalOccupied) : 0;
+
+  // rule-based insights: flag the standout properties without needing a real analytics backend
+  const insights = [];
+  const sortedByOcc = [...data].sort((a, b) => a.occRate - b.occRate);
+  const worstOcc = sortedByOcc[0];
+  if (worstOcc && worstOcc.occRate < 80) {
+    insights.push(`${worstOcc.fullName} has the lowest occupancy at ${worstOcc.occRate}% — consider prioritizing marketing or incentives here.`);
+  }
+  const sortedByCollection = [...data].sort((a, b) => a.collectionRate - b.collectionRate);
+  const worstCollection = sortedByCollection[0];
+  if (worstCollection && worstCollection.collectionRate < 90) {
+    insights.push(`${worstCollection.fullName} is collecting only ${worstCollection.collectionRate}% of billed rent this cycle — worth a closer look at overdue accounts.`);
+  }
+  const bestRevenue = [...data].sort((a, b) => b.revenue - a.revenue)[0];
+  if (bestRevenue) {
+    insights.push(`${bestRevenue.fullName} is your top revenue contributor at ${fmtMoney(bestRevenue.revenue)}/mo.`);
+  }
+  if (overallCollectionRate >= 95) {
+    insights.push(`Portfolio-wide collection rate is strong at ${overallCollectionRate}%.`);
+  } else if (overallCollectionRate < 85) {
+    insights.push(`Portfolio-wide collection rate has slipped to ${overallCollectionRate}% — below the healthy 90%+ range.`);
+  }
+
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div className="card p-4">
-        <div className="font-display font-semibold fs-15 mb-3">Occupancy by property</div>
-        <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={data} margin={{ left: -20 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E4E6EC" vertical={false} />
-            <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#68708A" }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 11, fill: "#68708A" }} axisLine={false} tickLine={false} unit="%" />
-            <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #E4E6EC", fontSize: 12.5 }} />
-            <Bar dataKey="occRate" fill="#3B5BA0" radius={[6, 6, 0, 0]} name="Occupancy %" />
-          </BarChart>
-        </ResponsiveContainer>
+    <div className="flex flex-col gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <KpiCard label="Portfolio Occupancy" value={`${Math.round((totalOccupied / units.length) * 100)}%`} icon={Home} accent="var(--green)" />
+        <KpiCard label="Collection Rate" value={`${overallCollectionRate}%`} icon={Wallet} accent={overallCollectionRate >= 90 ? "var(--green)" : "var(--amber)"} />
+        <KpiCard label="Avg. Rent / Occupied Unit" value={fmtMoney(avgRentPerUnit)} icon={TrendingUp} accent="var(--brass)" />
+        <KpiCard label="Properties Tracked" value={properties.length} icon={Building2} accent="var(--blue)" />
       </div>
+
       <div className="card p-4">
-        <div className="font-display font-semibold fs-15 mb-3">Monthly revenue by property</div>
-        <ResponsiveContainer width="100%" height={260}>
-          <BarChart data={data} margin={{ left: -10 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#E4E6EC" vertical={false} />
-            <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#68708A" }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 11, fill: "#68708A" }} axisLine={false} tickLine={false} tickFormatter={v => `KSh ${(v / 1e6).toFixed(1)}M`} />
-            <Tooltip formatter={v => fmtMoney(v)} contentStyle={{ borderRadius: 10, border: "1px solid #E4E6EC", fontSize: 12.5 }} />
-            <Bar dataKey="revenue" fill="#B08A3E" radius={[6, 6, 0, 0]} name="Revenue" />
-          </BarChart>
-        </ResponsiveContainer>
+        <div className="font-display font-semibold fs-15 mb-3">Business intelligence — auto-generated insights</div>
+        <div className="flex flex-col gap-2">
+          {insights.map((text, i) => (
+            <div key={i} className="flex gap-2.5 items-start fs-13">
+              <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: "var(--brass)" }} />
+              <span>{text}</span>
+            </div>
+          ))}
+          {insights.length === 0 && <div className="fs-13 c-muted">No notable outliers this cycle — everything's tracking within normal range.</div>}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div className="card p-4">
+          <div className="font-display font-semibold fs-15 mb-3">Occupancy by property</div>
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={data} margin={{ left: -20 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E4E6EC" vertical={false} />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#68708A" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: "#68708A" }} axisLine={false} tickLine={false} unit="%" />
+              <Tooltip contentStyle={{ borderRadius: 10, border: "1px solid #E4E6EC", fontSize: 12.5 }} />
+              <Bar dataKey="occRate" fill="#3B5BA0" radius={[6, 6, 0, 0]} name="Occupancy %" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+        <div className="card p-4">
+          <div className="font-display font-semibold fs-15 mb-3">Monthly revenue by property</div>
+          <ResponsiveContainer width="100%" height={240}>
+            <BarChart data={data} margin={{ left: -10 }}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#E4E6EC" vertical={false} />
+              <XAxis dataKey="name" tick={{ fontSize: 11, fill: "#68708A" }} axisLine={false} tickLine={false} />
+              <YAxis tick={{ fontSize: 11, fill: "#68708A" }} axisLine={false} tickLine={false} tickFormatter={v => `KSh ${(v / 1e6).toFixed(1)}M`} />
+              <Tooltip formatter={v => fmtMoney(v)} contentStyle={{ borderRadius: 10, border: "1px solid #E4E6EC", fontSize: 12.5 }} />
+              <Bar dataKey="revenue" fill="#B08A3E" radius={[6, 6, 0, 0]} name="Revenue" />
+            </BarChart>
+          </ResponsiveContainer>
+        </div>
+      </div>
+
+      <div className="card overflow-hidden">
+        <div className="p-3 border-b divider font-display font-semibold fs-15">Portfolio summary</div>
+        <div className="overflow-x-auto">
+          <table className="w-full pms-table">
+            <thead><tr className="text-left"><th className="py-2.5 pl-4">Property</th><th>Units</th><th>Occupancy</th><th>Rent roll</th><th>Avg rent</th><th>Collection rate</th></tr></thead>
+            <tbody>
+              {data.map(d => (
+                <tr key={d.id} className="row-hover border-t divider">
+                  <td className="py-2.5 pl-4 font-medium fs-135">{d.fullName}</td>
+                  <td className="fs-13 c-muted">{d.units}</td>
+                  <td className="fs-13">{d.occRate}%</td>
+                  <td className="fs-13 font-medium">{fmtMoney(d.revenue)}</td>
+                  <td className="fs-13 c-muted">{fmtMoney(d.avgRent)}</td>
+                  <td className="fs-13" style={{ color: d.collectionRate >= 90 ? "var(--green)" : "var(--amber)" }}>{d.collectionRate}%</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     </div>
   );
@@ -1273,6 +1432,179 @@ function AddPropertyModal({ onClose, onAdd }) {
           className="btn-brass rounded-lg py-2.5 fs-135 font-semibold w-full disabled:opacity-40">
           Add property
         </button>
+      </div>
+    </div>
+  );
+}
+
+/* ============================= ADD UNIT MODAL ============================= */
+function AddUnitModal({ properties, onClose, onAdd }) {
+  const [propertyId, setPropertyId] = useState(properties[0]?.id || "");
+  const [unitNumber, setUnitNumber] = useState("");
+  const [beds, setBeds] = useState(1);
+  const [baths, setBaths] = useState(1);
+  const [sqft, setSqft] = useState(700);
+  const [rent, setRent] = useState(100000);
+  const canSave = propertyId && unitNumber.trim() && rent > 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 scrim-40" onClick={onClose} />
+      <div className="relative card w-full max-w-md p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="font-display font-semibold fs-16">Add unit</div>
+          <button onClick={onClose} className="c-muted"><X size={18} /></button>
+        </div>
+
+        <label className="fs-125 c-muted block mb-1">Property</label>
+        <select className="input w-full rounded-lg px-3 py-2 fs-135 mb-3" value={propertyId} onChange={e => setPropertyId(e.target.value)}>
+          {properties.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
+        </select>
+
+        <label className="fs-125 c-muted block mb-1">Unit number</label>
+        <input className="input w-full rounded-lg px-3 py-2 fs-135 mb-3" placeholder="e.g. 107" value={unitNumber} onChange={e => setUnitNumber(e.target.value)} />
+
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label className="fs-125 c-muted block mb-1">Beds</label>
+            <input type="number" min={0} className="input w-full rounded-lg px-3 py-2 fs-135" value={beds} onChange={e => setBeds(+e.target.value)} />
+          </div>
+          <div>
+            <label className="fs-125 c-muted block mb-1">Baths</label>
+            <input type="number" min={0} className="input w-full rounded-lg px-3 py-2 fs-135" value={baths} onChange={e => setBaths(+e.target.value)} />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 mb-4">
+          <div>
+            <label className="fs-125 c-muted block mb-1">Square feet</label>
+            <input type="number" min={0} className="input w-full rounded-lg px-3 py-2 fs-135" value={sqft} onChange={e => setSqft(+e.target.value)} />
+          </div>
+          <div>
+            <label className="fs-125 c-muted block mb-1">Rent (KSh)</label>
+            <input type="number" min={0} className="input w-full rounded-lg px-3 py-2 fs-135" value={rent} onChange={e => setRent(+e.target.value)} />
+          </div>
+        </div>
+
+        <button
+          disabled={!canSave}
+          onClick={() => onAdd({ propertyId, unitNumber: unitNumber.trim(), beds, baths, sqft, rent })}
+          className="btn-brass rounded-lg py-2.5 fs-135 font-semibold w-full disabled:opacity-40"
+        >
+          Add unit
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ============================= ADD WORK ORDER MODAL ============================= */
+function AddWorkOrderModal({ units, propertyMap, onClose, onAdd }) {
+  const [unitId, setUnitId] = useState(units[0]?.id || "");
+  const [title, setTitle] = useState("");
+  const [category, setCategory] = useState("General");
+  const [priority, setPriority] = useState("Medium");
+  const [assigned, setAssigned] = useState("");
+  const canSave = unitId && title.trim();
+  const categories = ["Plumbing", "Electrical", "HVAC", "Appliance", "Structural", "Pest Control", "General"];
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 scrim-40" onClick={onClose} />
+      <div className="relative card w-full max-w-md p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="font-display font-semibold fs-16">Add work order</div>
+          <button onClick={onClose} className="c-muted"><X size={18} /></button>
+        </div>
+
+        <label className="fs-125 c-muted block mb-1">Unit</label>
+        <select className="input w-full rounded-lg px-3 py-2 fs-135 mb-3" value={unitId} onChange={e => setUnitId(e.target.value)}>
+          {units.map(u => <option key={u.id} value={u.id}>{propertyMap[u.propertyId].name} — №{u.unitNumber}</option>)}
+        </select>
+
+        <label className="fs-125 c-muted block mb-1">Issue</label>
+        <input className="input w-full rounded-lg px-3 py-2 fs-135 mb-3" placeholder="e.g. Leaking bathroom faucet" value={title} onChange={e => setTitle(e.target.value)} />
+
+        <div className="grid grid-cols-2 gap-3 mb-3">
+          <div>
+            <label className="fs-125 c-muted block mb-1">Category</label>
+            <select className="input w-full rounded-lg px-3 py-2 fs-135" value={category} onChange={e => setCategory(e.target.value)}>
+              {categories.map(c => <option key={c} value={c}>{c}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="fs-125 c-muted block mb-1">Priority</label>
+            <select className="input w-full rounded-lg px-3 py-2 fs-135" value={priority} onChange={e => setPriority(e.target.value)}>
+              <option>Urgent</option><option>High</option><option>Medium</option><option>Low</option>
+            </select>
+          </div>
+        </div>
+
+        <label className="fs-125 c-muted block mb-1">Assigned to (optional)</label>
+        <input className="input w-full rounded-lg px-3 py-2 fs-135 mb-4" placeholder="e.g. Marcus (In-house)" value={assigned} onChange={e => setAssigned(e.target.value)} />
+
+        <button
+          disabled={!canSave}
+          onClick={() => onAdd({ unitId, title: title.trim(), category, priority, assigned: assigned.trim() })}
+          className="btn-brass rounded-lg py-2.5 fs-135 font-semibold w-full disabled:opacity-40"
+        >
+          Add work order
+        </button>
+      </div>
+    </div>
+  );
+}
+
+/* ============================= RECORD PAYMENT MODAL ============================= */
+function RecordPaymentModal({ payments, tenantMap, onClose, onSave }) {
+  const outstanding = payments.filter(p => p.status !== "Paid");
+  const [paymentId, setPaymentId] = useState(outstanding[0]?.id || "");
+  const [method, setMethod] = useState("ACH Transfer");
+  const canSave = !!paymentId;
+  const selected = payments.find(p => p.id === paymentId);
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 scrim-40" onClick={onClose} />
+      <div className="relative card w-full max-w-md p-5">
+        <div className="flex items-center justify-between mb-4">
+          <div className="font-display font-semibold fs-16">Record payment</div>
+          <button onClick={onClose} className="c-muted"><X size={18} /></button>
+        </div>
+
+        {outstanding.length === 0 ? (
+          <div className="fs-13 c-muted py-6 text-center">Nothing outstanding — every payment this cycle is already recorded as paid.</div>
+        ) : (
+          <>
+            <label className="fs-125 c-muted block mb-1">Outstanding payment</label>
+            <select className="input w-full rounded-lg px-3 py-2 fs-135 mb-3" value={paymentId} onChange={e => setPaymentId(e.target.value)}>
+              {outstanding.map(p => (
+                <option key={p.id} value={p.id}>
+                  {tenantMap[p.tenantId].name} — {fmtMoney(p.amount)} ({p.status})
+                </option>
+              ))}
+            </select>
+
+            <label className="fs-125 c-muted block mb-1">Payment method</label>
+            <select className="input w-full rounded-lg px-3 py-2 fs-135 mb-4" value={method} onChange={e => setMethod(e.target.value)}>
+              <option>ACH Transfer</option><option>Card</option><option>Check</option><option>Cash</option><option>Mobile Money</option>
+            </select>
+
+            {selected && (
+              <div className="fs-115 c-muted mb-4">
+                Marking {fmtMoney(selected.amount)} from {tenantMap[selected.tenantId].name} as paid today.
+              </div>
+            )}
+
+            <button
+              disabled={!canSave}
+              onClick={() => onSave({ paymentId, method })}
+              className="btn-brass rounded-lg py-2.5 fs-135 font-semibold w-full disabled:opacity-40"
+            >
+              Record payment
+            </button>
+          </>
+        )}
       </div>
     </div>
   );
