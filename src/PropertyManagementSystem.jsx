@@ -4,7 +4,7 @@ import {
   BarChart3, Settings, Search, Bell, Plus, ChevronLeft, ChevronRight,
   AlertTriangle, CheckCircle2, Clock, TrendingUp, X, MapPin, Phone, Mail,
   Calendar, ChevronDown, Home, ArrowUpRight, ArrowDownRight, Filter,
-  MoreHorizontal, Menu
+  MoreHorizontal, Menu, MessageSquare, Send, CheckCheck
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -237,6 +237,29 @@ const rentRollTrend = [
   { month: "Jul", billed: 4985000, collected: 4465000 },
 ];
 
+/* ============================= SMS ============================= */
+const SMS_TEMPLATES = [
+  { id: "reminder", label: "Rent reminder", body: "Hi {name}, this is a reminder that your rent of {amount} for {property} #{unit} is due. Please make payment at your earliest convenience. - Gatehouse" },
+  { id: "overdue", label: "Overdue notice", body: "Hi {name}, your rent payment of {amount} for {property} #{unit} is now overdue. Kindly settle this as soon as possible to avoid further action. - Gatehouse" },
+  { id: "renewal", label: "Lease renewal", body: "Hi {name}, your lease for {property} #{unit} is ending soon. Please contact us to discuss renewal options. - Gatehouse" },
+  { id: "maintenance", label: "Maintenance update", body: "Hi {name}, we wanted to update you on your maintenance request for {property} #{unit}. Our team will be in touch shortly. - Gatehouse" },
+  { id: "welcome", label: "Welcome message", body: "Hi {name}, welcome to {property} #{unit}! We're glad to have you. Reach out anytime if you need anything. - Gatehouse" },
+  { id: "custom", label: "Custom message", body: "" },
+];
+
+function personalizeSms(body, tenant, unit, property) {
+  return body
+    .split("{name}").join(tenant.name)
+    .split("{amount}").join(fmtMoney(tenant.balance > 0 ? tenant.balance : tenant.rent))
+    .split("{property}").join(property ? property.name : "")
+    .split("{unit}").join(unit ? unit.unitNumber : "");
+}
+
+const initialMessages = [
+  { id: "sms1", tenantId: "t3", body: "Hi Aisha Bello, this is a reminder that your rent of KSh 122,500 for Cedar Point Residences #103 is due. Please make payment at your earliest convenience. - Gatehouse", segments: 1, sentAt: "2026-07-20 09:14", status: "Delivered" },
+  { id: "sms2", tenantId: "t9", body: "Hi Grace Muthoni, welcome to Maple & Main Lofts #303! We're glad to have you. Reach out anytime if you need anything. - Gatehouse", segments: 1, sentAt: "2026-07-15 11:02", status: "Delivered" },
+];
+
 /* ============================= LOGO =============================
    Custom mark for "Gatehouse": an arched gateway with portcullis bars
    and a keystone at the apex — a gate that watches over what's inside,
@@ -327,6 +350,8 @@ function StatusBadge({ status }) {
     Medium: ["badge-blue", Clock, "Medium"],
     Low: ["badge-gray", Clock, "Low"],
     "Moved Out": ["badge-gray", CheckCircle2, "Moved Out"],
+    Delivered: ["badge-green", CheckCheck, "Delivered"],
+    Failed: ["badge-red", AlertTriangle, "Failed"],
     Ended: ["badge-gray", CheckCircle2, "Ended"],
   };
   const [cls, Icon, label] = map[status] || ["badge-gray", Clock, status];
@@ -347,6 +372,7 @@ const NAV = [
     { id: "payments", label: "Payments", icon: Wallet },
     { id: "reports", label: "Reports", icon: BarChart3 },
   ]},
+  { group: "Communication", items: [{ id: "messages", label: "Messages", icon: MessageSquare }] },
   { group: "System", items: [{ id: "settings", label: "Settings", icon: Settings }] },
 ];
 
@@ -359,6 +385,7 @@ const SECTION_META = {
   maintenance: { title: "Maintenance", sub: "Work orders across the portfolio" },
   payments: { title: "Payments", sub: "Rent collection for the current cycle" },
   reports: { title: "Reports", sub: "Performance across properties" },
+  messages: { title: "Messages", sub: "SMS communication with tenants" },
   settings: { title: "Settings", sub: "Organization preferences" },
 };
 
@@ -379,6 +406,7 @@ export default function PropertyManagementSystem() {
   const [leasesState, setLeasesState] = useState(leases);
   const [paymentsState, setPaymentsState] = useState(payments);
   const [maintenanceItems, setMaintenanceItems] = useState(maintenance);
+  const [messagesState, setMessagesState] = useState(initialMessages);
   const [addTenantOpen, setAddTenantOpen] = useState(false);
   const [presetUnitId, setPresetUnitId] = useState(null);
   const [addUnitOpen, setAddUnitOpen] = useState(false);
@@ -448,6 +476,29 @@ export default function PropertyManagementSystem() {
     setTenantsState(list => list.map(t => t.id === tenantId ? { ...t, status: "Moved Out" } : t));
     setDrawerTenant(null);
     goTo("units");
+  };
+
+  // Sends a personalized SMS to each selected tenant and logs it. In this demo build the
+  // "send" is simulated client-side; a production deployment would POST to a backend route
+  // (e.g. /api/sms/send) that calls a gateway like Africa's Talking or Twilio using a
+  // server-held API key — see docs/SMS.md for the wiring.
+  const sendSms = (tenantIds, rawBody) => {
+    const entries = tenantIds.map((tenantId, i) => {
+      const tenant = tenantMap[tenantId];
+      const unit = tenant ? unitMap[tenant.unitId] : null;
+      const property = tenant ? propertyMap[tenant.propertyId] : null;
+      const body = personalizeSms(rawBody, tenant, unit, property);
+      return {
+        id: `sms${Date.now()}_${i}`,
+        tenantId,
+        body,
+        segments: Math.max(1, Math.ceil(body.length / 160)),
+        sentAt: "2026-07-24 " + new Date().toTimeString().slice(0, 5),
+        status: "Delivered",
+      };
+    });
+    setMessagesState(list => [...entries.reverse(), ...list]);
+    return entries.length;
   };
 
   useEffect(() => {
@@ -627,10 +678,11 @@ export default function PropertyManagementSystem() {
           {section === "properties" && <PropertiesView query={query} localProperties={localProperties} goTo={goTo} units={unitsState} />}
           {section === "units" && <UnitsView query={query} pendingFilter={pendingFilter} units={unitsState} propertyMap={propertyMap} tenantMap={tenantMap} onRegisterTenant={(unitId) => { setPresetUnitId(unitId); setAddTenantOpen(true); }} />}
           {section === "tenants" && <TenantsView query={query} onOpen={setDrawerTenant} tenants={tenantsState} propertyMap={propertyMap} unitMap={unitMap} onRegister={() => setAddTenantOpen(true)} />}
-          {section === "leases" && <LeasesView query={query} pendingFilter={pendingFilter} leases={leasesState} tenantMap={tenantMap} unitMap={unitMap} propertyMap={propertyMap} onRenew={renewLease} />}
+          {section === "leases" && <LeasesView query={query} pendingFilter={pendingFilter} leases={leasesState} tenantMap={tenantMap} unitMap={unitMap} propertyMap={propertyMap} onRenew={renewLease} onNotify={sendSms} />}
           {section === "maintenance" && <MaintenanceView query={query} pendingFilter={pendingFilter} items={maintenanceItems} setItems={setMaintenanceItems} unitMap={unitMap} propertyMap={propertyMap} />}
-          {section === "payments" && <PaymentsView query={query} pendingFilter={pendingFilter} payments={paymentsState} tenantMap={tenantMap} propertyMap={propertyMap} />}
+          {section === "payments" && <PaymentsView query={query} pendingFilter={pendingFilter} payments={paymentsState} tenantMap={tenantMap} propertyMap={propertyMap} onRemind={sendSms} />}
           {section === "reports" && <ReportsView properties={localProperties} units={unitsState} tenants={tenantsState} payments={paymentsState} />}
+          {section === "messages" && <MessagesView tenants={tenantsState} propertyMap={propertyMap} unitMap={unitMap} messages={messagesState} onSend={sendSms} />}
           {section === "settings" && <SettingsView />}
         </main>
       </div>
@@ -978,9 +1030,10 @@ function TenantDrawer({ tenant, onClose, propertyMap, unitMap, leases, payments,
 }
 
 /* ============================= LEASES ============================= */
-function LeasesView({ query, pendingFilter, leases, tenantMap, unitMap, propertyMap, onRenew }) {
+function LeasesView({ query, pendingFilter, leases, tenantMap, unitMap, propertyMap, onRenew, onNotify }) {
   const [statusFilter, setStatusFilter] = useState(pendingFilter?.status || "all");
   useEffect(() => { if (pendingFilter?.status) setStatusFilter(pendingFilter.status); }, [pendingFilter]);
+  const [notifiedIds, setNotifiedIds] = useState([]);
   const q = query.trim().toLowerCase();
   const statuses = ["all", "Active", "Expiring Soon", "Ending — Notice Given"];
   const list = leases.filter(l => {
@@ -989,6 +1042,7 @@ function LeasesView({ query, pendingFilter, leases, tenantMap, unitMap, property
     const matchS = statusFilter === "all" || l.status === statusFilter;
     return matchQ && matchS;
   }).sort((a, b) => daysUntil(a.end) - daysUntil(b.end));
+  const renewalTemplate = SMS_TEMPLATES.find(t => t.id === "renewal").body;
   return (
     <div className="card overflow-hidden">
       <div className="flex items-center gap-2 p-3 border-b divider flex-wrap">
@@ -1019,9 +1073,18 @@ function LeasesView({ query, pendingFilter, leases, tenantMap, unitMap, property
                   <td><StatusBadge status={l.status} /></td>
                   <td className="pr-4">
                     {canRenew && (
-                      <button onClick={() => onRenew(l.id, 12)} className="btn-outline rounded-full px-2.5 py-1 fs-115 font-medium whitespace-nowrap">
-                        Renew 12mo
-                      </button>
+                      <div className="flex gap-1.5 justify-end">
+                        {notifiedIds.includes(l.id) ? (
+                          <span className="fs-115 c-muted flex items-center gap-1"><CheckCheck size={13} /> Notified</span>
+                        ) : (
+                          <button onClick={() => { onNotify([t.id], renewalTemplate); setNotifiedIds(ids => [...ids, l.id]); }} className="btn-outline rounded-full px-2.5 py-1 fs-115 font-medium whitespace-nowrap">
+                            Notify
+                          </button>
+                        )}
+                        <button onClick={() => onRenew(l.id, 12)} className="btn-outline rounded-full px-2.5 py-1 fs-115 font-medium whitespace-nowrap">
+                          Renew 12mo
+                        </button>
+                      </div>
                     )}
                   </td>
                 </tr>
@@ -1095,9 +1158,10 @@ function MaintenanceView({ query, pendingFilter, items, setItems, unitMap, prope
 }
 
 /* ============================= PAYMENTS ============================= */
-function PaymentsView({ query, pendingFilter, payments, tenantMap, propertyMap }) {
+function PaymentsView({ query, pendingFilter, payments, tenantMap, propertyMap, onRemind }) {
   const [statusFilter, setStatusFilter] = useState(pendingFilter?.status || "all");
   useEffect(() => { if (pendingFilter?.status) setStatusFilter(pendingFilter.status); }, [pendingFilter]);
+  const [remindedIds, setRemindedIds] = useState([]);
   const q = query.trim().toLowerCase();
   const list = payments.filter(pay => {
     const t = tenantMap[pay.tenantId];
@@ -1110,6 +1174,7 @@ function PaymentsView({ query, pendingFilter, payments, tenantMap, propertyMap }
     pending: payments.filter(p => p.status === "Pending").reduce((s, p) => s + p.amount, 0),
     overdue: payments.filter(p => p.status === "Overdue").reduce((s, p) => s + p.amount, 0),
   };
+  const reminderTemplate = SMS_TEMPLATES.find(t => t.id === "overdue").body;
   return (
     <div className="flex flex-col gap-4">
       <div className="grid grid-cols-3 gap-4">
@@ -1130,10 +1195,11 @@ function PaymentsView({ query, pendingFilter, payments, tenantMap, propertyMap }
         </div>
         <div className="overflow-x-auto">
           <table className="w-full pms-table">
-            <thead><tr className="text-left"><th className="py-2.5 pl-4">Tenant</th><th>Property</th><th>For</th><th>Method</th><th>Date</th><th>Amount</th><th>Status</th></tr></thead>
+            <thead><tr className="text-left"><th className="py-2.5 pl-4">Tenant</th><th>Property</th><th>For</th><th>Method</th><th>Date</th><th>Amount</th><th>Status</th><th></th></tr></thead>
             <tbody>
               {list.map(pay => {
                 const t = tenantMap[pay.tenantId], p = propertyMap[t.propertyId];
+                const needsReminder = pay.status !== "Paid";
                 return (
                   <tr key={pay.id} className="row-hover border-t divider">
                     <td className="py-2.5 pl-4 font-medium fs-135">{t.name}</td>
@@ -1143,6 +1209,17 @@ function PaymentsView({ query, pendingFilter, payments, tenantMap, propertyMap }
                     <td className="fs-13">{fmtDate(pay.date)}</td>
                     <td className="fs-13 font-medium">{fmtMoney(pay.amount)}</td>
                     <td><StatusBadge status={pay.status} /></td>
+                    <td className="pr-4">
+                      {needsReminder && (
+                        remindedIds.includes(pay.id) ? (
+                          <span className="fs-115 c-muted flex items-center gap-1 whitespace-nowrap"><CheckCheck size={13} /> Reminded</span>
+                        ) : (
+                          <button onClick={() => { onRemind([t.id], reminderTemplate); setRemindedIds(ids => [...ids, pay.id]); }} className="btn-outline rounded-full px-2.5 py-1 fs-115 font-medium whitespace-nowrap">
+                            Send reminder
+                          </button>
+                        )
+                      )}
+                    </td>
                   </tr>
                 );
               })}
@@ -1275,6 +1352,139 @@ function ReportsView({ properties, units, tenants, payments }) {
 }
 
 /* ============================= SETTINGS ============================= */
+/* ============================= MESSAGES / SMS ============================= */
+function MessagesView({ tenants, propertyMap, unitMap, messages, onSend }) {
+  const [selectedIds, setSelectedIds] = useState([]);
+  const [templateId, setTemplateId] = useState(SMS_TEMPLATES[0].id);
+  const [body, setBody] = useState(SMS_TEMPLATES[0].body);
+  const [recipientSearch, setRecipientSearch] = useState("");
+  const [confirmation, setConfirmation] = useState(null);
+
+  const activeTenants = tenants.filter(t => t.status !== "Moved Out");
+  const q = recipientSearch.trim().toLowerCase();
+  const visibleTenants = activeTenants.filter(t => !q || t.name.toLowerCase().includes(q) || propertyMap[t.propertyId].name.toLowerCase().includes(q));
+
+  const toggleTenant = (id) => setSelectedIds(ids => ids.includes(id) ? ids.filter(x => x !== id) : [...ids, id]);
+  const selectAllVisible = () => setSelectedIds(ids => Array.from(new Set([...ids, ...visibleTenants.map(t => t.id)])));
+  const selectLate = () => setSelectedIds(activeTenants.filter(t => t.status === "Late").map(t => t.id));
+  const clearSelection = () => setSelectedIds([]);
+
+  const handleTemplateChange = (id) => {
+    setTemplateId(id);
+    setBody(SMS_TEMPLATES.find(t => t.id === id).body);
+  };
+
+  const segments = Math.max(body.length === 0 ? 0 : 1, Math.ceil(body.length / 160));
+  const canSend = selectedIds.length > 0 && body.trim().length > 0;
+
+  const previewTenant = selectedIds.length ? tenants.find(t => t.id === selectedIds[0]) : null;
+  const previewText = previewTenant
+    ? personalizeSms(body, previewTenant, unitMap[previewTenant.unitId], propertyMap[previewTenant.propertyId])
+    : body;
+
+  const handleSend = () => {
+    const count = onSend(selectedIds, body);
+    setConfirmation(`Sent to ${count} tenant${count === 1 ? "" : "s"}.`);
+    setSelectedIds([]);
+    setTimeout(() => setConfirmation(null), 4000);
+  };
+
+  return (
+    <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+      <div className="lg:col-span-2 card p-4 flex flex-col gap-3">
+        <div className="font-display font-semibold fs-15">Recipients</div>
+        <div className="relative">
+          <Search size={13} className="absolute left-2.5 top-1/2 -translate-y-1/2 c-muted2" />
+          <input value={recipientSearch} onChange={e => setRecipientSearch(e.target.value)} placeholder="Search tenants…" className="input w-full rounded-lg pl-8 pr-3 py-2 fs-125" />
+        </div>
+        <div className="flex gap-1.5 flex-wrap">
+          <button onClick={selectAllVisible} className="btn-outline rounded-full px-2.5 py-1 fs-115 font-medium">Select all</button>
+          <button onClick={selectLate} className="btn-outline rounded-full px-2.5 py-1 fs-115 font-medium">Select late tenants</button>
+          <button onClick={clearSelection} className="btn-outline rounded-full px-2.5 py-1 fs-115 font-medium">Clear</button>
+        </div>
+        <div className="flex flex-col gap-1 max-h-80 overflow-y-auto border-t divider pt-2">
+          {visibleTenants.map(t => {
+            const p = propertyMap[t.propertyId], u = unitMap[t.unitId];
+            const checked = selectedIds.includes(t.id);
+            return (
+              <label key={t.id} className={`flex items-center gap-2.5 px-2 py-1.5 rounded-lg cursor-pointer ${checked ? "bg-FAFAFC" : "row-hover"}`}>
+                <input type="checkbox" checked={checked} onChange={() => toggleTenant(t.id)} className="w-4 h-4 shrink-0" />
+                <div className="min-w-0">
+                  <div className="fs-13 font-medium truncate">{t.name}</div>
+                  <div className="fs-115 c-muted truncate">{p.name} №{u.unitNumber} · {t.phone}</div>
+                </div>
+                {t.status === "Late" && <span className="ml-auto shrink-0"><StatusBadge status="Late" /></span>}
+              </label>
+            );
+          })}
+          {visibleTenants.length === 0 && <div className="fs-13 c-muted text-center py-6">No tenants match that search.</div>}
+        </div>
+        <div className="fs-115 c-muted border-t divider pt-2">{selectedIds.length} recipient{selectedIds.length === 1 ? "" : "s"} selected</div>
+      </div>
+
+      <div className="lg:col-span-3 flex flex-col gap-4">
+        <div className="card p-4 flex flex-col gap-3">
+          <div className="font-display font-semibold fs-15">Compose</div>
+          <div>
+            <label className="fs-115 c-muted block mb-1">Template</label>
+            <select value={templateId} onChange={e => handleTemplateChange(e.target.value)} className="input w-full rounded-lg px-3 py-2 fs-135">
+              {SMS_TEMPLATES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+            </select>
+          </div>
+          <div>
+            <label className="fs-115 c-muted block mb-1">Message</label>
+            <textarea
+              value={body}
+              onChange={e => setBody(e.target.value)}
+              rows={5}
+              placeholder="Type your message… use {name}, {property}, {unit}, and {amount} to personalize per recipient"
+              className="input w-full rounded-lg px-3 py-2 fs-135"
+            />
+            <div className="flex justify-between fs-115 c-muted mt-1">
+              <span>{body.length} characters</span>
+              <span>{segments} SMS segment{segments === 1 ? "" : "s"}</span>
+            </div>
+          </div>
+          {previewTenant && (
+            <div className="bg-FAFAFC rounded-lg p-3">
+              <div className="fs-11 font-semibold c-muted uppercase tracking-wide mb-1">Preview — {previewTenant.name}</div>
+              <div className="fs-13">{previewText}</div>
+            </div>
+          )}
+          <button disabled={!canSend} onClick={handleSend} className="btn-brass rounded-lg py-2.5 fs-135 font-semibold w-full disabled:opacity-40 flex items-center justify-center gap-2">
+            <Send size={15} /> Send SMS
+          </button>
+          {confirmation && <div className="fs-125 text-center" style={{ color: "var(--green)" }}>{confirmation}</div>}
+        </div>
+
+        <div className="card overflow-hidden">
+          <div className="p-3 border-b divider font-display font-semibold fs-15">Message log</div>
+          <div className="overflow-x-auto max-h-96 overflow-y-auto">
+            <table className="w-full pms-table">
+              <thead><tr className="text-left"><th className="py-2.5 pl-4">Recipient</th><th>Message</th><th>Segments</th><th>Sent</th><th>Status</th></tr></thead>
+              <tbody>
+                {messages.map(m => {
+                  const t = tenants.find(x => x.id === m.tenantId);
+                  return (
+                    <tr key={m.id} className="row-hover border-t divider">
+                      <td className="py-2.5 pl-4 font-medium fs-13 whitespace-nowrap">{t ? t.name : "—"}</td>
+                      <td className="fs-125 c-muted" style={{ maxWidth: 320 }}>{m.body}</td>
+                      <td className="fs-13 c-muted">{m.segments}</td>
+                      <td className="fs-13 c-muted whitespace-nowrap">{m.sentAt}</td>
+                      <td><StatusBadge status={m.status} /></td>
+                    </tr>
+                  );
+                })}
+                {messages.length === 0 && <tr><td colSpan={5} className="py-8 text-center fs-13 c-muted">No messages sent yet.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function SettingsView() {
   const [form, setForm] = useState({ org: "Gatehouse Property Group", email: "ops@gatehouse.com", timezone: "America/Chicago", notifyLease: true, notifyPayment: true, notifyMaintenance: false });
   return (

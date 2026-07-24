@@ -5,6 +5,7 @@ A full-featured property management dashboard: liquid-glass sidebar navigation, 
 This is a production-ready **Vite + React + Tailwind** app.
 
 📘 **[Sidebar & Navigation Guide](./docs/SIDEBAR.md)** — full documentation of every sidebar section and its options.
+📱 **[SMS / Tenant Communication](./docs/SMS.md)** — how the Messages feature works and how to wire in real SMS delivery.
 
 ## Local development
 ```bash
@@ -43,6 +44,7 @@ No extra configuration is required.
 - Collapsible sidebar with grouped navigation and a liquid-glass animated background
 - Dashboard with live KPIs, rent-roll trend chart, and a "needs attention" alert feed
 - Properties, Units, Tenants (with full registration flow), Leases, Maintenance (kanban), Payments, Reports, Settings
+- SMS communication with tenants — templates, personalization, bulk send, and a full message log (frontend workflow complete; see docs/SMS.md for wiring real delivery)
 - Currency formatted in Kenyan Shillings (KSh)
 - Synthesized UI click sound on interactive elements
 
