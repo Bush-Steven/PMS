@@ -109,6 +109,7 @@ const Theme = () => (
     .hover-bg-F7F7F9:hover{ background:#F7F7F9; }
     .hover-ink2:hover{ background:var(--ink-2); color:#fff; }
     .minh-80{ min-height:80px; }
+    .modal-maxh{ max-height:90vh; }
     .scrim-40{ background:rgba(0,0,0,0.4); }
     .scrim-30{ background:rgba(0,0,0,0.3); }
     .icon-90{ opacity:.9; }
@@ -302,9 +303,6 @@ const fmtMoney = (n) => "KSh " + Math.round(n).toLocaleString("en-US");
 const fmtDate = (d) => d === "—" ? "—" : new Date(d).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" });
 const daysUntil = (d) => Math.round((new Date(d) - TODAY) / 86400000);
 const byId = (arr) => Object.fromEntries(arr.map(x => [x.id, x]));
-const propertyMap = byId(properties);
-const unitMap = byId(units);
-const tenantMap = byId(tenants);
 
 function StatusBadge({ status }) {
   const map = {
@@ -374,13 +372,38 @@ export default function PropertyManagementSystem() {
   const [notifOpen, setNotifOpen] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
   const [localProperties, setLocalProperties] = useState(properties);
+  const [unitsState, setUnitsState] = useState(units);
+  const [tenantsState, setTenantsState] = useState(tenants);
+  const [leasesState, setLeasesState] = useState(leases);
+  const [paymentsState, setPaymentsState] = useState(payments);
   const [maintenanceItems, setMaintenanceItems] = useState(maintenance);
+  const [addTenantOpen, setAddTenantOpen] = useState(false);
+  const [presetUnitId, setPresetUnitId] = useState(null);
   const navRef = useRef(null);
   const itemRefs = useRef({});
   const [pillStyle, setPillStyle] = useState({ top: 0, height: 0, opacity: 0 });
 
+  const propertyMap = useMemo(() => byId(localProperties), [localProperties]);
+  const unitMap = useMemo(() => byId(unitsState), [unitsState]);
+  const tenantMap = useMemo(() => byId(tenantsState), [tenantsState]);
+
   const goTo = (sec, filter = null) => {
     setSection(sec); setQuery(""); setPendingFilter(filter); setMobileOpen(false);
+  };
+
+  const registerTenant = ({ unitId, name, email, phone, rent, leaseStart, leaseEnd }) => {
+    const unit = unitsState.find(u => u.id === unitId);
+    if (!unit) return;
+    const tenantId = `t${Date.now()}`;
+    const leaseId = `l${Date.now() + 1}`;
+    const propertyId = unit.propertyId;
+    setUnitsState(list => list.map(u => u.id === unitId ? { ...u, status: "occupied", tenantId, leaseId } : u));
+    setTenantsState(list => [...list, { id: tenantId, name, email, phone, unitId, leaseId, propertyId, rent, status: "Current", balance: 0 }]);
+    setLeasesState(list => [...list, { id: leaseId, tenantId, unitId, propertyId, start: leaseStart, end: leaseEnd, rent, status: "Active" }]);
+    setPaymentsState(list => [...list, { id: `pay${Date.now()}`, tenantId, amount: rent, forMonth: "August 2026", method: "ACH Transfer", status: "Pending", date: "2026-08-01" }]);
+    setAddTenantOpen(false);
+    setPresetUnitId(null);
+    goTo("tenants");
   };
 
   useEffect(() => {
@@ -405,20 +428,20 @@ export default function PropertyManagementSystem() {
   };
 
   const kpis = useMemo(() => {
-    const occupied = units.filter(u => u.status === "occupied" || u.status === "notice").length;
-    const total = units.length;
-    const rentRoll = units.filter(u => u.tenantId).reduce((s, u) => s + u.rent, 0);
-    const collected = payments.filter(p => p.status === "Paid").reduce((s, p) => s + p.amount, 0);
-    const outstanding = payments.filter(p => p.status !== "Paid").reduce((s, p) => s + p.amount, 0);
+    const occupied = unitsState.filter(u => u.status === "occupied" || u.status === "notice").length;
+    const total = unitsState.length;
+    const rentRoll = unitsState.filter(u => u.tenantId).reduce((s, u) => s + u.rent, 0);
+    const collected = paymentsState.filter(p => p.status === "Paid").reduce((s, p) => s + p.amount, 0);
+    const outstanding = paymentsState.filter(p => p.status !== "Paid").reduce((s, p) => s + p.amount, 0);
     const urgentMaint = maintenanceItems.filter(m => m.status !== "Completed" && (m.priority === "Urgent" || m.priority === "High")).length;
     const openMaint = maintenanceItems.filter(m => m.status !== "Completed").length;
-    const expiringLeases = leases.filter(l => daysUntil(l.end) <= 60 && daysUntil(l.end) >= 0).length;
+    const expiringLeases = leasesState.filter(l => daysUntil(l.end) <= 60 && daysUntil(l.end) >= 0).length;
     return { occupied, total, occRate: Math.round((occupied / total) * 100), rentRoll, collected, outstanding, urgentMaint, openMaint, expiringLeases };
-  }, [maintenanceItems]);
+  }, [unitsState, paymentsState, leasesState, maintenanceItems]);
 
   const alerts = useMemo(() => {
     const list = [];
-    leases.filter(l => daysUntil(l.end) <= 60 && daysUntil(l.end) >= 0)
+    leasesState.filter(l => daysUntil(l.end) <= 60 && daysUntil(l.end) >= 0)
       .sort((a, b) => daysUntil(a.end) - daysUntil(b.end))
       .forEach(l => {
         const t = tenantMap[l.tenantId], u = unitMap[l.unitId], p = propertyMap[l.propertyId];
@@ -426,7 +449,7 @@ export default function PropertyManagementSystem() {
           text: `${t.name}'s lease at ${p.name} #${u.unitNumber} ends in ${daysUntil(l.end)} days`,
           go: () => goTo("leases", { status: "Expiring Soon" }) });
       });
-    tenants.filter(t => t.status === "Late").forEach(t => {
+    tenantsState.filter(t => t.status === "Late").forEach(t => {
       const p = propertyMap[t.propertyId], u = unitMap[t.unitId];
       list.push({ type: "payment", severity: "red",
         text: `${t.name} (${p.name} #${u.unitNumber}) is late on rent — ${fmtMoney(t.balance)} outstanding`,
@@ -439,7 +462,7 @@ export default function PropertyManagementSystem() {
         go: () => goTo("maintenance", { priority: "Urgent" }) });
     });
     return list;
-  }, [maintenanceItems]);
+  }, [maintenanceItems, leasesState, tenantsState, tenantMap, unitMap, propertyMap]);
 
   return (
     <div className="pms flex h-full w-full" style={{ minHeight: "640px" }}>
@@ -513,8 +536,8 @@ export default function PropertyManagementSystem() {
             />
           </div>
           <div className="ml-auto flex items-center gap-2 relative">
-            <button onClick={() => setAddOpen(true)} className="btn-brass rounded-lg px-3 py-2 fs-13 font-semibold flex items-center gap-1.5">
-              <Plus size={15} /> <span className="hidden sm:inline">Add</span>
+            <button onClick={() => (section === "tenants" ? setAddTenantOpen(true) : setAddOpen(true))} className="btn-brass rounded-lg px-3 py-2 fs-13 font-semibold flex items-center gap-1.5">
+              <Plus size={15} /> <span className="hidden sm:inline">{section === "tenants" ? "Register tenant" : "Add"}</span>
             </button>
             <button onClick={() => setNotifOpen(o => !o)} className="btn-outline rounded-lg p-2 relative">
               <Bell size={16} />
@@ -545,20 +568,29 @@ export default function PropertyManagementSystem() {
             <div className="fs-13 c-muted">{SECTION_META[section].sub}</div>
           </div>
 
-          {section === "dashboard" && <Dashboard kpis={kpis} alerts={alerts} goTo={goTo} query={query} maintenanceItems={maintenanceItems} />}
-          {section === "properties" && <PropertiesView query={query} localProperties={localProperties} goTo={goTo} />}
-          {section === "units" && <UnitsView query={query} pendingFilter={pendingFilter} />}
-          {section === "tenants" && <TenantsView query={query} onOpen={setDrawerTenant} />}
-          {section === "leases" && <LeasesView query={query} pendingFilter={pendingFilter} />}
-          {section === "maintenance" && <MaintenanceView query={query} pendingFilter={pendingFilter} items={maintenanceItems} setItems={setMaintenanceItems} />}
-          {section === "payments" && <PaymentsView query={query} pendingFilter={pendingFilter} />}
-          {section === "reports" && <ReportsView />}
+          {section === "dashboard" && <Dashboard kpis={kpis} alerts={alerts} goTo={goTo} query={query} maintenanceItems={maintenanceItems} leases={leasesState} payments={paymentsState} tenantMap={tenantMap} unitMap={unitMap} propertyMap={propertyMap} />}
+          {section === "properties" && <PropertiesView query={query} localProperties={localProperties} goTo={goTo} units={unitsState} />}
+          {section === "units" && <UnitsView query={query} pendingFilter={pendingFilter} units={unitsState} propertyMap={propertyMap} tenantMap={tenantMap} onRegisterTenant={(unitId) => { setPresetUnitId(unitId); setAddTenantOpen(true); }} />}
+          {section === "tenants" && <TenantsView query={query} onOpen={setDrawerTenant} tenants={tenantsState} propertyMap={propertyMap} unitMap={unitMap} onRegister={() => setAddTenantOpen(true)} />}
+          {section === "leases" && <LeasesView query={query} pendingFilter={pendingFilter} leases={leasesState} tenantMap={tenantMap} unitMap={unitMap} propertyMap={propertyMap} />}
+          {section === "maintenance" && <MaintenanceView query={query} pendingFilter={pendingFilter} items={maintenanceItems} setItems={setMaintenanceItems} unitMap={unitMap} propertyMap={propertyMap} />}
+          {section === "payments" && <PaymentsView query={query} pendingFilter={pendingFilter} payments={paymentsState} tenantMap={tenantMap} propertyMap={propertyMap} />}
+          {section === "reports" && <ReportsView properties={localProperties} units={unitsState} />}
           {section === "settings" && <SettingsView />}
         </main>
       </div>
 
-      {drawerTenant && <TenantDrawer tenant={drawerTenant} onClose={() => setDrawerTenant(null)} />}
+      {drawerTenant && <TenantDrawer tenant={drawerTenant} onClose={() => setDrawerTenant(null)} propertyMap={propertyMap} unitMap={unitMap} leases={leasesState} payments={paymentsState} />}
       {addOpen && <AddPropertyModal onClose={() => setAddOpen(false)} onAdd={(p) => { setLocalProperties(list => [...list, p]); setAddOpen(false); goTo("properties"); }} />}
+      {addTenantOpen && (
+        <AddTenantModal
+          units={unitsState}
+          propertyMap={propertyMap}
+          presetUnitId={presetUnitId}
+          onClose={() => { setAddTenantOpen(false); setPresetUnitId(null); }}
+          onSave={registerTenant}
+        />
+      )}
     </div>
   );
 }
@@ -584,7 +616,7 @@ function KpiCard({ label, value, delta, deltaGood, icon: Icon, accent }) {
 }
 
 /* ============================= DASHBOARD ============================= */
-function Dashboard({ kpis, alerts, goTo, maintenanceItems }) {
+function Dashboard({ kpis, alerts, goTo, maintenanceItems, leases, payments, tenantMap, unitMap, propertyMap }) {
   const upcoming = leases.filter(l => daysUntil(l.end) <= 60 && daysUntil(l.end) >= 0).sort((a, b) => daysUntil(a.end) - daysUntil(b.end));
   const activity = [
     ...payments.filter(p => p.status !== "Paid").map(p => ({ kind: "payment", date: p.date === "—" ? "2026-07-01" : p.date, text: `${tenantMap[p.tenantId].name} — ${p.status.toLowerCase()} payment of ${fmtMoney(p.amount)}` })),
@@ -679,7 +711,7 @@ function Dashboard({ kpis, alerts, goTo, maintenanceItems }) {
 }
 
 /* ============================= PROPERTIES ============================= */
-function PropertiesView({ query, localProperties, goTo }) {
+function PropertiesView({ query, localProperties, goTo, units }) {
   const [expanded, setExpanded] = useState(null);
   const q = query.trim().toLowerCase();
   const list = localProperties.filter(p => !q || p.name.toLowerCase().includes(q) || p.address.toLowerCase().includes(q));
@@ -733,7 +765,7 @@ function PropertiesView({ query, localProperties, goTo }) {
 }
 
 /* ============================= UNITS ============================= */
-function UnitsView({ query, pendingFilter }) {
+function UnitsView({ query, pendingFilter, units, propertyMap, tenantMap, onRegisterTenant }) {
   const [statusFilter, setStatusFilter] = useState(pendingFilter?.status || "all");
   useEffect(() => { if (pendingFilter?.status) setStatusFilter(pendingFilter.status); }, [pendingFilter]);
   const q = query.trim().toLowerCase();
@@ -758,7 +790,7 @@ function UnitsView({ query, pendingFilter }) {
       </div>
       <div className="overflow-x-auto">
         <table className="w-full pms-table">
-          <thead><tr className="text-left"><th className="py-2.5 pl-4">Unit</th><th>Property</th><th>Layout</th><th>Sqft</th><th>Rent</th><th>Status</th><th>Tenant</th></tr></thead>
+          <thead><tr className="text-left"><th className="py-2.5 pl-4">Unit</th><th>Property</th><th>Layout</th><th>Sqft</th><th>Rent</th><th>Status</th><th>Tenant</th><th></th></tr></thead>
           <tbody>
             {list.map(u => {
               const p = propertyMap[u.propertyId];
@@ -772,6 +804,13 @@ function UnitsView({ query, pendingFilter }) {
                   <td className="fs-13 font-medium">{fmtMoney(u.rent)}</td>
                   <td><StatusBadge status={u.status} /></td>
                   <td className="fs-13 c-muted">{t ? t.name : "—"}</td>
+                  <td className="pr-4">
+                    {u.status === "vacant" && (
+                      <button onClick={() => onRegisterTenant(u.id)} className="btn-outline rounded-full px-2.5 py-1 fs-115 font-medium whitespace-nowrap">
+                        Register tenant
+                      </button>
+                    )}
+                  </td>
                 </tr>
               );
             })}
@@ -783,7 +822,7 @@ function UnitsView({ query, pendingFilter }) {
 }
 
 /* ============================= TENANTS ============================= */
-function TenantsView({ query, onOpen }) {
+function TenantsView({ query, onOpen, tenants, propertyMap, unitMap, onRegister }) {
   const q = query.trim().toLowerCase();
   const list = tenants.filter(t => !q || t.name.toLowerCase().includes(q) || propertyMap[t.propertyId].name.toLowerCase().includes(q));
   return (
@@ -813,6 +852,12 @@ function TenantsView({ query, onOpen }) {
                 </tr>
               );
             })}
+            {list.length === 0 && (
+              <tr><td colSpan={7} className="py-10 text-center">
+                <div className="fs-13 c-muted mb-3">No tenants match that search.</div>
+                <button onClick={onRegister} className="btn-brass rounded-lg px-4 py-2 fs-125 font-semibold">Register a tenant</button>
+              </td></tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -820,7 +865,7 @@ function TenantsView({ query, onOpen }) {
   );
 }
 
-function TenantDrawer({ tenant, onClose }) {
+function TenantDrawer({ tenant, onClose, propertyMap, unitMap, leases, payments }) {
   const p = propertyMap[tenant.propertyId], u = unitMap[tenant.unitId], l = leases.find(x => x.id === tenant.leaseId);
   const history = payments.filter(pay => pay.tenantId === tenant.id);
   return (
@@ -864,7 +909,7 @@ function TenantDrawer({ tenant, onClose }) {
 }
 
 /* ============================= LEASES ============================= */
-function LeasesView({ query, pendingFilter }) {
+function LeasesView({ query, pendingFilter, leases, tenantMap, unitMap, propertyMap }) {
   const [statusFilter, setStatusFilter] = useState(pendingFilter?.status || "all");
   useEffect(() => { if (pendingFilter?.status) setStatusFilter(pendingFilter.status); }, [pendingFilter]);
   const q = query.trim().toLowerCase();
@@ -913,7 +958,7 @@ function LeasesView({ query, pendingFilter }) {
 }
 
 /* ============================= MAINTENANCE ============================= */
-function MaintenanceView({ query, pendingFilter, items, setItems }) {
+function MaintenanceView({ query, pendingFilter, items, setItems, unitMap, propertyMap }) {
   const [priorityFilter, setPriorityFilter] = useState(pendingFilter?.priority || "all");
   useEffect(() => { if (pendingFilter?.priority) setPriorityFilter(pendingFilter.priority); }, [pendingFilter]);
   const q = query.trim().toLowerCase();
@@ -973,7 +1018,7 @@ function MaintenanceView({ query, pendingFilter, items, setItems }) {
 }
 
 /* ============================= PAYMENTS ============================= */
-function PaymentsView({ query, pendingFilter }) {
+function PaymentsView({ query, pendingFilter, payments, tenantMap, propertyMap }) {
   const [statusFilter, setStatusFilter] = useState(pendingFilter?.status || "all");
   useEffect(() => { if (pendingFilter?.status) setStatusFilter(pendingFilter.status); }, [pendingFilter]);
   const q = query.trim().toLowerCase();
@@ -1033,7 +1078,7 @@ function PaymentsView({ query, pendingFilter }) {
 }
 
 /* ============================= REPORTS ============================= */
-function ReportsView() {
+function ReportsView({ properties, units }) {
   const data = properties.map(p => {
     const pu = units.filter(u => u.propertyId === p.id);
     const occ = pu.filter(u => u.tenantId).length;
@@ -1096,6 +1141,103 @@ function SettingsView() {
   );
 }
 
+/* ============================= REGISTER TENANT MODAL ============================= */
+function addMonths(dateStr, months) {
+  const d = new Date(dateStr);
+  d.setMonth(d.getMonth() + months);
+  return d.toISOString().slice(0, 10);
+}
+
+function AddTenantModal({ units, propertyMap, presetUnitId, onClose, onSave }) {
+  const vacantUnits = units.filter(u => u.status === "vacant");
+  const [unitId, setUnitId] = useState(presetUnitId || vacantUnits[0]?.id || "");
+  const [name, setName] = useState("");
+  const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [leaseStart, setLeaseStart] = useState("2026-08-01");
+  const [termMonths, setTermMonths] = useState(12);
+  const [rent, setRent] = useState(() => units.find(u => u.id === unitId)?.rent || 0);
+
+  useEffect(() => {
+    const u = units.find(x => x.id === unitId);
+    if (u) setRent(u.rent);
+  }, [unitId]);
+
+  const selectedUnit = units.find(u => u.id === unitId);
+  const leaseEnd = addMonths(leaseStart, Number(termMonths));
+  const canSave = name.trim() && email.trim() && unitId && rent > 0;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 scrim-40" onClick={onClose} />
+      <div className="relative card w-full max-w-md p-5 modal-maxh overflow-y-auto">
+        <div className="flex items-center justify-between mb-4">
+          <div className="font-display font-semibold fs-16">Register tenant</div>
+          <button onClick={onClose} className="c-muted"><X size={18} /></button>
+        </div>
+
+        {vacantUnits.length === 0 ? (
+          <div className="fs-13 c-muted py-6 text-center">No vacant units available to assign right now.</div>
+        ) : (
+          <>
+            <label className="fs-125 c-muted block mb-1">Unit</label>
+            <select className="input w-full rounded-lg px-3 py-2 fs-135 mb-3" value={unitId} onChange={e => setUnitId(e.target.value)}>
+              {vacantUnits.map(u => (
+                <option key={u.id} value={u.id}>
+                  {propertyMap[u.propertyId].name} — №{u.unitNumber} ({fmtMoney(u.rent)}/mo)
+                </option>
+              ))}
+            </select>
+
+            <label className="fs-125 c-muted block mb-1">Full name</label>
+            <input className="input w-full rounded-lg px-3 py-2 fs-135 mb-3" placeholder="e.g. Wanjiku Kariuki" value={name} onChange={e => setName(e.target.value)} />
+
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className="fs-125 c-muted block mb-1">Email</label>
+                <input type="email" className="input w-full rounded-lg px-3 py-2 fs-135" placeholder="name@email.com" value={email} onChange={e => setEmail(e.target.value)} />
+              </div>
+              <div>
+                <label className="fs-125 c-muted block mb-1">Phone</label>
+                <input className="input w-full rounded-lg px-3 py-2 fs-135" placeholder="07xx xxx xxx" value={phone} onChange={e => setPhone(e.target.value)} />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 mb-3">
+              <div>
+                <label className="fs-125 c-muted block mb-1">Lease start</label>
+                <input type="date" className="input w-full rounded-lg px-3 py-2 fs-135" value={leaseStart} onChange={e => setLeaseStart(e.target.value)} />
+              </div>
+              <div>
+                <label className="fs-125 c-muted block mb-1">Lease term</label>
+                <select className="input w-full rounded-lg px-3 py-2 fs-135" value={termMonths} onChange={e => setTermMonths(e.target.value)}>
+                  <option value={6}>6 months</option>
+                  <option value={12}>12 months</option>
+                  <option value={24}>24 months</option>
+                </select>
+              </div>
+            </div>
+
+            <label className="fs-125 c-muted block mb-1">Monthly rent (KSh)</label>
+            <input type="number" min={0} className="input w-full rounded-lg px-3 py-2 fs-135 mb-3" value={rent} onChange={e => setRent(+e.target.value)} />
+
+            {selectedUnit && (
+              <div className="fs-115 c-muted mb-4">Lease will run {fmtDate(leaseStart)} – {fmtDate(leaseEnd)}.</div>
+            )}
+
+            <button
+              disabled={!canSave}
+              onClick={() => onSave({ unitId, name: name.trim(), email: email.trim(), phone: phone.trim(), rent, leaseStart, leaseEnd })}
+              className="btn-brass rounded-lg py-2.5 fs-135 font-semibold w-full disabled:opacity-40"
+            >
+              Register tenant
+            </button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
 /* ============================= ADD PROPERTY MODAL ============================= */
 function AddPropertyModal({ onClose, onAdd }) {
   const [name, setName] = useState("");

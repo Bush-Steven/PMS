@@ -11,4 +11,16 @@ export default defineConfig({
     host: true,
     port: process.env.PORT ? Number(process.env.PORT) : 4173,
   },
+  build: {
+    chunkSizeWarningLimit: 600,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          vendor: ["react", "react-dom"],
+          charts: ["recharts"],
+          icons: ["lucide-react"],
+        },
+      },
+    },
+  },
 });
