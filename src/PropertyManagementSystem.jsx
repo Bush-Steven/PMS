@@ -1217,6 +1217,69 @@ function MiniCalendar({ leases, maintenanceItems, unitMap, propertyMap, tenantMa
   );
 }
 
+/* ============================= PROPERTY ILLUSTRATION =============================
+   A small deterministic "building portrait" per property — varies silhouette, window
+   grid, and material color by property type, seeded from the property id so it's
+   stable across renders. Avoids hotlinking external stock photos (which we can't
+   verify are live/licensed for this build) while still making each card look like a
+   distinct, real building instead of a flat gradient block.                        */
+function hashSeed(str) {
+  let h = 0;
+  for (let i = 0; i < str.length; i++) h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  return h;
+}
+
+function PropertyIllustration({ property }) {
+  const seed = hashSeed(property.id);
+  const rand = (n, salt = 0) => ((seed + salt * 97) % n + n) % n;
+
+  const palettes = {
+    Residential: { sky: ["#FFD9A0", "#FF9E7D"], body: "#E8D5BE", window: "#8FB8D9", lit: "#FFD873", roof: "#B08A6A" },
+    Commercial: { sky: ["#BFD9FF", "#7FAFFA"], body: "#5B7A99", window: "#CFE6FF", lit: "#FFF3C4", roof: "#3E5266" },
+    "Mixed Use": { sky: ["#E7C9FF", "#B98CF0"], body: "#B4694A", window: "#F2C9A0", lit: "#FFDE8A", roof: "#6B4432" },
+  };
+  const palette = palettes[property.type] || palettes.Residential;
+
+  const floors = property.type === "Commercial" ? 7 : property.type === "Mixed Use" ? 4 : 5;
+  const cols = property.type === "Mixed Use" ? 4 : 6;
+  const bodyX = property.type === "Commercial" ? 140 : 60;
+  const bodyW = property.type === "Commercial" ? 130 : 280;
+  const bodyTop = property.type === "Commercial" ? 18 : 45;
+  const winGapX = (bodyW - 40) / cols;
+  const winW = winGapX * 0.62;
+  const floorH = (150 - bodyTop - 20) / floors;
+
+  const windows = [];
+  for (let f = 0; f < floors; f++) {
+    for (let c = 0; c < cols; c++) {
+      const lit = rand(5, f * cols + c + 1) === 0;
+      windows.push(
+        <rect key={`${f}-${c}`}
+          x={bodyX + 20 + c * winGapX} y={bodyTop + 14 + f * floorH}
+          width={winW} height={floorH * 0.55} rx={2}
+          fill={lit ? palette.lit : palette.window} opacity={lit ? 0.95 : 0.85} />
+      );
+    }
+  }
+
+  return (
+    <svg viewBox="0 0 400 160" className="w-full h-full" preserveAspectRatio="xMidYMax slice">
+      <defs>
+        <linearGradient id={`sky-${property.id}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={palette.sky[0]} />
+          <stop offset="100%" stopColor={palette.sky[1]} />
+        </linearGradient>
+      </defs>
+      <rect width="400" height="160" fill={`url(#sky-${property.id})`} />
+      <rect x="0" y="150" width="400" height="10" fill="#00000022" />
+      <rect x={bodyX} y={bodyTop} width={bodyW} height={150 - bodyTop} fill={palette.body} />
+      <rect x={bodyX} y={bodyTop - 4} width={bodyW} height="6" fill={palette.roof} />
+      {windows}
+      <rect x={bodyX + bodyW / 2 - 14} y="138" width="28" height="12" rx="2" fill={palette.roof} />
+    </svg>
+  );
+}
+
 /* ============================= PROPERTIES ============================= */
 function PropertiesView({ query, localProperties, goTo, units }) {
   const [expanded, setExpanded] = useState(null);
@@ -1228,12 +1291,14 @@ function PropertiesView({ query, localProperties, goTo, units }) {
         const pUnits = units.filter(u => u.propertyId === p.id);
         const occ = pUnits.filter(u => u.tenantId).length;
         const rentRoll = pUnits.filter(u => u.tenantId).reduce((s, u) => s + u.rent, 0);
-        const hue = ["#B08A3E", "#3B5BA0", "#2F7A5D", "#C17A2C", "#8E6E2E", "#5B4A8A", "#3B5BA0"][i % 7];
         const isOpen = expanded === p.id;
         return (
           <div key={p.id} className="card overflow-hidden flex flex-col">
-            <div className="h-24 flex items-end p-4" style={{ background: `linear-gradient(135deg, ${hue}, ${hue}CC)` }}>
-              <Building2 size={26} className="text-white icon-90" />
+            <div className="h-28 relative">
+              <PropertyIllustration property={p} />
+              <div className="absolute top-2.5 left-2.5 w-8 h-8 rounded-full flex items-center justify-center shadow" style={{ background: "rgba(255,255,255,0.9)" }}>
+                <Building2 size={15} style={{ color: "var(--ink)" }} />
+              </div>
             </div>
             <div className="p-4 flex-1 flex flex-col gap-3">
               <div>
