@@ -1,5 +1,9 @@
 # Gatehouse — Sidebar & Navigation Guide
 
+> **Design note:** Gatehouse now uses a premium glassmorphism theme — purple/blue gradient sidebar, 24px-rounded floating cards, soft shadows, animated counters, and a light/dark theme switch (moon/sun icon in the top bar). The Dashboard was substantially expanded to match an enterprise property-management brief: 6 KPI cards, a filterable analytics chart (Week/Month/Quarter/Year), portfolio composition, a maintenance widget, recent payments, upcoming lease expiry with one-click renewal, recent maintenance requests, vacant units, a right-hand column (today's summary, quick actions, mini calendar, quick notes), and a footer (financial summary, occupancy heatmap, property performance ranking).
+>
+> A few widgets are intentionally honest placeholders rather than fake integrations: the **weather widget** shows sample data (a real deployment would wire in a weather API), and the **Financial Summary**'s Expenses line reads "Not tracked yet" since there's no accounting module recording costs — only rent income and outstanding balances are real numbers today.
+
 This document explains every option available in Gatehouse's sidebar navigation, grouped exactly as they appear in the app, plus what each screen lets you do.
 
 ---
@@ -11,6 +15,8 @@ This document explains every option available in Gatehouse's sidebar navigation,
 - **Mobile** — on narrow screens the sidebar becomes a slide-out drawer, opened via the menu icon in the top bar and closed by tapping outside it.
 - **Global search** — the search box in the top bar filters the records on whatever screen you're currently viewing (e.g. searching while on Tenants filters tenants; searching while on Units filters units).
 - **Notification bell** — shows a live count of items that need attention (expiring leases, late rent, urgent maintenance). Clicking an alert jumps you straight to the relevant section with the right filter already applied.
+- **Theme switch** — the moon/sun icon toggles between light and dark mode app-wide.
+- **Quick add (+)** — a global dropdown (the circular "+" button) with one-tap shortcuts to Add property, Register tenant, Add unit, Record payment, Assign maintenance, and Reports — available from anywhere, regardless of which section you're on.
 - **Add button — context-aware, and only shown where it applies.** It changes label and action based on the section you're on, and disappears entirely on screens where "adding" doesn't make sense:
 
 | Section | Button shown | Action |

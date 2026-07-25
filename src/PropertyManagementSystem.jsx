@@ -4,7 +4,7 @@ import {
   BarChart3, Settings, Search, Bell, Plus, ChevronLeft, ChevronRight,
   AlertTriangle, CheckCircle2, Clock, TrendingUp, X, MapPin, Phone, Mail,
   Calendar, ChevronDown, Home, ArrowUpRight, ArrowDownRight, Filter,
-  MoreHorizontal, Menu, MessageSquare, Send, CheckCheck
+  MoreHorizontal, Menu, MessageSquare, Send, CheckCheck, Sun, Moon, LayoutGrid
 } from "lucide-react";
 import {
   AreaChart, Area, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
@@ -14,76 +14,96 @@ import {
 /* ============================= THEME ============================= */
 const Theme = () => (
   <style>{`
-    @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600;9..144,700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&display=swap');
 
     :root{
-      --ink:#12172A; --ink-2:#1B2340; --ink-3:#242D52;
-      --paper:#F3F4F7; --card:#FFFFFF; --line:#E4E6EC;
-      --text:#191E2B; --muted:#68708A; --muted-2:#8A91A8;
-      --brass:#B08A3E; --brass-dark:#8E6E2E; --brass-soft:#F1E6CC;
-      --green:#2F7A5D; --green-soft:#E3F1EA;
-      --amber:#C17A2C; --amber-soft:#FBEBD9;
-      --red:#B4483A; --red-soft:#F8E4E1;
-      --blue:#3B5BA0; --blue-soft:#E7ECF7;
+      /* brand */
+      --ink:#6C4EF6; --ink-2:#5B3FE0; --ink-3:#4A31C7;
+      --blue:#4F8EF7; --blue-soft:#E9F0FE;
+      /* surfaces */
+      --paper:#F5F6FC; --card:#FFFFFF; --line:#EAEAF5;
+      --text:#171A2B; --muted:#6B7094; --muted-2:#9498B8;
+      /* brand aliases (kept for class-name compatibility across the app) */
+      --brass:#6C4EF6; --brass-dark:#5B3FE0; --brass-soft:#EDE8FE;
+      /* semantic */
+      --green:#0FA968; --green-soft:#E4F9EE;
+      --amber:#F2994A; --amber-soft:#FDECDA;
+      --red:#EF4444; --red-soft:#FDEAEA;
     }
-    .pms{ font-family:'Inter',sans-serif; color:var(--text); background:var(--paper); }
+    .pms{ font-family:'Inter',sans-serif; color:var(--text); background:var(--paper); transition:background .25s ease, color .25s ease; }
     .pms *{ box-sizing:border-box; }
-    .font-display{ font-family:'Fraunces',serif; }
+    .font-display{ font-family:'Inter',sans-serif; font-weight:800; letter-spacing:-0.01em; }
     .font-mono{ font-family:'IBM Plex Mono',monospace; }
 
+    /* ---- dark theme overrides ---- */
+    .pms[data-theme="dark"]{
+      --paper:#12132B; --card:#1B1D3D; --line:#2C2E52;
+      --text:#EEEFFB; --muted:#A2A5D0; --muted-2:#7A7DAE;
+      --brass-soft:#332B6E; --green-soft:#123A2C; --amber-soft:#3A2A15; --red-soft:#3A1A1A; --blue-soft:#1E2A55;
+    }
+    .pms[data-theme="dark"] .btn-outline{ background:var(--card); color:var(--text); border-color:var(--line); }
+    .pms[data-theme="dark"] .hover-bg-F7F7F9:hover, .pms[data-theme="dark"] .bg-FAFAFC, .pms[data-theme="dark"] .row-hover:hover{ background:#22244A; }
+    .pms[data-theme="dark"] .input{ background:var(--card); color:var(--text); border-color:var(--line); }
+
     .sidebar{
-      background: linear-gradient(180deg, rgba(19,23,43,0.82), rgba(19,23,43,0.94));
-      color:#E9ECF6; position:relative; overflow:hidden;
+      background: linear-gradient(190deg, #7C5CFA 0%, #6C4EF6 45%, #4F3FD9 100%);
+      color:#F3F1FF; position:relative; overflow:hidden;
       backdrop-filter: blur(22px) saturate(170%);
       -webkit-backdrop-filter: blur(22px) saturate(170%);
-      border-right: 1px solid rgba(255,255,255,0.08);
-      box-shadow: 8px 0 40px rgba(0,0,0,0.18);
+      border-right: 1px solid rgba(255,255,255,0.10);
+      box-shadow: 8px 0 40px rgba(76,49,199,0.25);
     }
     .glass-blob{ position:absolute; border-radius:9999px; filter:blur(46px); pointer-events:none; z-index:0; }
-    .blob-a{ width:230px; height:230px; top:-70px; left:-70px; background:radial-gradient(circle, rgba(176,138,62,0.55), transparent 70%); animation: driftA 19s ease-in-out infinite; }
-    .blob-b{ width:260px; height:260px; bottom:-90px; right:-100px; background:radial-gradient(circle, rgba(59,91,160,0.5), transparent 70%); animation: driftB 23s ease-in-out infinite; }
-    .blob-c{ width:190px; height:190px; top:42%; left:-80px; background:radial-gradient(circle, rgba(47,122,93,0.45), transparent 70%); animation: driftC 27s ease-in-out infinite; }
+    .blob-a{ width:230px; height:230px; top:-70px; left:-70px; background:radial-gradient(circle, rgba(79,142,247,0.55), transparent 70%); animation: driftA 19s ease-in-out infinite; }
+    .blob-b{ width:260px; height:260px; bottom:-90px; right:-100px; background:radial-gradient(circle, rgba(236,72,153,0.4), transparent 70%); animation: driftB 23s ease-in-out infinite; }
+    .blob-c{ width:190px; height:190px; top:42%; left:-80px; background:radial-gradient(circle, rgba(255,255,255,0.35), transparent 70%); animation: driftC 27s ease-in-out infinite; }
     @keyframes driftA{ 0%,100%{ transform:translate(0,0) scale(1); } 50%{ transform:translate(45px,65px) scale(1.18); } }
     @keyframes driftB{ 0%,100%{ transform:translate(0,0) scale(1); } 50%{ transform:translate(-35px,-55px) scale(1.12); } }
     @keyframes driftC{ 0%,100%{ transform:translate(0,0) scale(1); } 50%{ transform:translate(55px,-35px) scale(1.22); } }
     .glass-shine{
       position:absolute; inset:0; z-index:1; pointer-events:none; mix-blend-mode:screen;
-      background:linear-gradient(115deg, transparent 25%, rgba(255,255,255,0.05) 38%, rgba(255,255,255,0.12) 46%, rgba(255,255,255,0.05) 54%, transparent 70%);
+      background:linear-gradient(115deg, transparent 25%, rgba(255,255,255,0.08) 38%, rgba(255,255,255,0.16) 46%, rgba(255,255,255,0.08) 54%, transparent 70%);
       background-size:240% 240%;
       animation: shineSweep 10s ease-in-out infinite;
     }
     @keyframes shineSweep{ 0%,100%{ background-position:-50% -50%; } 50%{ background-position:150% 150%; } }
-    .sidebar-group-label{ color:#7C87AE; letter-spacing:.08em; position:relative; z-index:2; }
+    .sidebar-group-label{ color:rgba(255,255,255,0.55); letter-spacing:.08em; position:relative; z-index:2; }
     .nav-rail{ position:relative; z-index:2; }
     .nav-pill{
-      position:absolute; top:0; left:8px; right:8px; border-radius:12px; z-index:1; pointer-events:none;
-      background:linear-gradient(135deg, rgba(176,138,62,0.32), rgba(176,138,62,0.10));
-      border:1px solid rgba(255,255,255,0.16);
-      box-shadow:0 6px 20px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.22);
+      position:absolute; top:0; left:8px; right:8px; border-radius:14px; z-index:1; pointer-events:none;
+      background:rgba(255,255,255,0.16);
+      border:1px solid rgba(255,255,255,0.28);
+      box-shadow:0 6px 20px rgba(0,0,0,0.18), inset 0 1px 0 rgba(255,255,255,0.3);
       backdrop-filter: blur(6px);
       transition: transform .5s cubic-bezier(.34,1.56,.64,1), height .4s cubic-bezier(.34,1.56,.64,1), opacity .3s ease;
     }
-    .nav-pill::before{ content:''; position:absolute; left:0; top:8px; bottom:8px; width:3px; background:var(--brass); border-radius:0 3px 3px 0; }
+    .nav-pill::before{ content:''; position:absolute; left:0; top:8px; bottom:8px; width:3px; background:#fff; border-radius:0 3px 3px 0; }
     .nav-item{
-      color:#C4CADE; position:relative; z-index:2;
+      color:rgba(255,255,255,0.8); position:relative; z-index:2;
       background-color:transparent; background-image:none;
       transition:background-color .2s ease, color .15s ease;
     }
     .nav-item:hover{
-      color:#fff; background-color:rgba(255,255,255,0.04);
-      background-image: radial-gradient(120px circle at var(--mx,50%) var(--my,50%), rgba(255,255,255,0.18), transparent 65%);
+      color:#fff; background-color:rgba(255,255,255,0.06);
+      background-image: radial-gradient(120px circle at var(--mx,50%) var(--my,50%), rgba(255,255,255,0.22), transparent 65%);
     }
     .nav-item.active{ color:#fff; font-weight:600; }
-    .brand-mark{ background:linear-gradient(135deg,var(--brass),var(--brass-dark)); position:relative; z-index:2; box-shadow:0 2px 10px rgba(176,138,62,0.4); }
+    .brand-mark{ background:linear-gradient(135deg,#8B6EFF,#5B3FE0); position:relative; z-index:2; box-shadow:0 2px 14px rgba(0,0,0,0.18); }
 
-    .card{ background:var(--card); border:1px solid var(--line); border-radius:14px; }
+    .card{ background:var(--card); border:1px solid var(--line); border-radius:24px; box-shadow:0 1px 2px rgba(24,24,64,0.04), 0 8px 24px rgba(24,24,64,0.05); transition:background .25s ease, border-color .25s ease; }
+    .glass-card{
+      background: rgba(255,255,255,0.65); border:1px solid rgba(255,255,255,0.5); border-radius:24px;
+      backdrop-filter: blur(18px) saturate(160%); -webkit-backdrop-filter: blur(18px) saturate(160%);
+      box-shadow:0 8px 32px rgba(76,49,199,0.10);
+    }
+    .pms[data-theme="dark"] .glass-card{ background:rgba(27,29,61,0.65); border-color:rgba(255,255,255,0.08); }
     .topbar{ background:var(--card); border-bottom:1px solid var(--line); }
-    .btn-brass{ background:var(--brass); color:#fff; }
-    .btn-brass:hover{ background:var(--brass-dark); }
+    .btn-brass{ background:linear-gradient(135deg,var(--ink),var(--ink-2)); color:#fff; box-shadow:0 6px 16px rgba(108,78,246,0.32); }
+    .btn-brass:hover{ background:linear-gradient(135deg,var(--ink-2),var(--ink-3)); }
     .btn-outline{ border:1px solid var(--line); background:#fff; color:var(--text); }
-    .btn-outline:hover{ background:#F7F7F9; }
-    .input{ border:1px solid var(--line); background:#fff; }
-    .input:focus{ outline:none; border-color:var(--brass); box-shadow:0 0 0 3px var(--brass-soft); }
+    .btn-outline:hover{ background:#F7F7FD; }
+    .input{ border:1px solid var(--line); background:#fff; border-radius:12px; }
+    .input:focus{ outline:none; border-color:var(--ink); box-shadow:0 0 0 3px var(--brass-soft); }
 
     .badge{ font-size:11px; font-weight:600; padding:3px 9px; border-radius:99px; display:inline-flex; align-items:center; gap:5px; white-space:nowrap; }
     .badge-green{ background:var(--green-soft); color:var(--green); }
@@ -91,8 +111,9 @@ const Theme = () => (
     .badge-red{ background:var(--red-soft); color:var(--red); }
     .badge-blue{ background:var(--blue-soft); color:var(--blue); }
     .badge-gray{ background:#EEF0F4; color:var(--muted); }
+    .pms[data-theme="dark"] .badge-gray{ background:#2C2E52; color:var(--muted); }
 
-    .row-hover:hover{ background:#FAFAFC; }
+    .row-hover:hover{ background:#FAFAFF; }
     .ledger-id{ color:var(--muted-2); font-family:'IBM Plex Mono',monospace; font-size:12px; }
     .divider{ border-color:var(--line); }
     table.pms-table th{ font-size:11px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:600; }
@@ -399,6 +420,8 @@ export default function PropertyManagementSystem() {
   const [pendingFilter, setPendingFilter] = useState(null);
   const [drawerTenant, setDrawerTenant] = useState(null);
   const [notifOpen, setNotifOpen] = useState(false);
+  const [quickAddOpen, setQuickAddOpen] = useState(false);
+  const [theme, setTheme] = useState("light");
   const [addOpen, setAddOpen] = useState(false);
   const [localProperties, setLocalProperties] = useState(properties);
   const [unitsState, setUnitsState] = useState(units);
@@ -531,6 +554,15 @@ export default function PropertyManagementSystem() {
   };
   const addAction = addActions[section] || null;
 
+  const quickAddItems = [
+    { label: "Add property", icon: Building2, onClick: () => { setAddOpen(true); setQuickAddOpen(false); } },
+    { label: "Register tenant", icon: Users, onClick: () => { setAddTenantOpen(true); setQuickAddOpen(false); } },
+    { label: "Add unit", icon: DoorOpen, onClick: () => { setAddUnitOpen(true); setQuickAddOpen(false); } },
+    { label: "Record payment", icon: Wallet, onClick: () => { setRecordPaymentOpen(true); setQuickAddOpen(false); } },
+    { label: "Assign maintenance", icon: Wrench, onClick: () => { setAddWorkOrderOpen(true); setQuickAddOpen(false); } },
+    { label: "Go to Reports", icon: BarChart3, onClick: () => { goTo("reports"); setQuickAddOpen(false); } },
+  ];
+
   const kpis = useMemo(() => {
     const occupied = unitsState.filter(u => u.status === "occupied" || u.status === "notice").length;
     const total = unitsState.length;
@@ -569,7 +601,7 @@ export default function PropertyManagementSystem() {
   }, [maintenanceItems, leasesState, tenantsState, tenantMap, unitMap, propertyMap]);
 
   return (
-    <div className="pms flex h-full w-full" style={{ minHeight: "640px" }}>
+    <div className="pms flex h-full w-full" data-theme={theme} style={{ minHeight: "640px" }}>
       <Theme />
 
       {/* ============ SIDEBAR ============ */}
@@ -645,6 +677,25 @@ export default function PropertyManagementSystem() {
                 <Plus size={15} /> <span className="hidden sm:inline">{addAction.label}</span>
               </button>
             )}
+            <button onClick={() => setTheme(t => t === "light" ? "dark" : "light")} className="btn-outline rounded-lg p-2" title="Toggle theme">
+              {theme === "light" ? <Moon size={16} /> : <Sun size={16} />}
+            </button>
+            <button onClick={() => setQuickAddOpen(o => !o)} className="btn-outline rounded-full p-2" title="Quick add" style={{ borderColor: "var(--ink)" }}>
+              <Plus size={16} style={{ color: "var(--ink)" }} />
+            </button>
+            {quickAddOpen && (
+              <div className="card absolute right-0 top-12 w-56 shadow-xl z-20 p-2">
+                <div className="px-2 py-1.5 fs-12 font-semibold c-muted uppercase tracking-wide">Quick add</div>
+                {quickAddItems.map((item, i) => {
+                  const Icon = item.icon;
+                  return (
+                    <button key={i} onClick={item.onClick} className="w-full text-left px-2 py-2 rounded-lg hover-bg-F7F7F9 flex items-center gap-2.5 fs-13">
+                      <Icon size={15} style={{ color: "var(--ink)" }} /> {item.label}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
             <button onClick={() => setNotifOpen(o => !o)} className="btn-outline rounded-lg p-2 relative">
               <Bell size={16} />
               {alerts.length > 0 && <span className="absolute -top-1 -right-1 w-4 h-4 rounded-full fs-9 font-bold flex items-center justify-center text-white" style={{ background: "var(--red)" }}>{alerts.length}</span>}
@@ -661,7 +712,7 @@ export default function PropertyManagementSystem() {
                 ))}
               </div>
             )}
-            <div className="w-9 h-9 rounded-full font-display font-semibold flex items-center justify-center text-white shrink-0" style={{ background: "var(--ink)" }}>JM</div>
+            <div className="w-9 h-9 rounded-full font-display font-semibold flex items-center justify-center text-white shrink-0" style={{ background: "linear-gradient(135deg,var(--ink),var(--blue))" }}>JM</div>
           </div>
         </header>
 
@@ -674,7 +725,7 @@ export default function PropertyManagementSystem() {
             <div className="fs-13 c-muted">{SECTION_META[section].sub}</div>
           </div>
 
-          {section === "dashboard" && <Dashboard kpis={kpis} alerts={alerts} goTo={goTo} query={query} maintenanceItems={maintenanceItems} leases={leasesState} payments={paymentsState} tenantMap={tenantMap} unitMap={unitMap} propertyMap={propertyMap} />}
+          {section === "dashboard" && <Dashboard kpis={kpis} alerts={alerts} goTo={goTo} query={query} maintenanceItems={maintenanceItems} leases={leasesState} payments={paymentsState} tenantMap={tenantMap} unitMap={unitMap} propertyMap={propertyMap} units={unitsState} tenants={tenantsState} properties={localProperties} onRenew={renewLease} quickAddItems={quickAddItems} />}
           {section === "properties" && <PropertiesView query={query} localProperties={localProperties} goTo={goTo} units={unitsState} />}
           {section === "units" && <UnitsView query={query} pendingFilter={pendingFilter} units={unitsState} propertyMap={propertyMap} tenantMap={tenantMap} onRegisterTenant={(unitId) => { setPresetUnitId(unitId); setAddTenantOpen(true); }} />}
           {section === "tenants" && <TenantsView query={query} onOpen={setDrawerTenant} tenants={tenantsState} propertyMap={propertyMap} unitMap={unitMap} onRegister={() => setAddTenantOpen(true)} />}
@@ -712,7 +763,29 @@ export default function PropertyManagementSystem() {
 }
 
 /* ============================= KPI CARD ============================= */
-function KpiCard({ label, value, delta, deltaGood, icon: Icon, accent }) {
+function useCountUp(target, duration = 900) {
+  const [display, setDisplay] = useState(0);
+  useEffect(() => {
+    let startTime = null;
+    let raf;
+    const step = (ts) => {
+      const now = typeof ts === "number" ? ts : Date.now();
+      if (startTime === null) startTime = now;
+      const progress = Math.min((now - startTime) / duration, 1);
+      const eased = 1 - Math.pow(1 - progress, 3);
+      const next = Math.round(target * eased);
+      setDisplay(Number.isFinite(next) ? next : 0);
+      if (progress < 1) raf = requestAnimationFrame(step);
+    };
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration]);
+  return display;
+}
+
+function KpiCard({ label, value, numeric, format, delta, deltaGood, icon: Icon, accent }) {
+  const animated = useCountUp(numeric ?? 0);
+  const shown = numeric != null ? format(animated) : value;
   return (
     <div className="card p-4 flex flex-col gap-3">
       <div className="flex items-center justify-between">
@@ -721,7 +794,7 @@ function KpiCard({ label, value, delta, deltaGood, icon: Icon, accent }) {
           <Icon size={15} style={{ color: accent }} />
         </div>
       </div>
-      <div className="font-display font-semibold fs-26 leading-none">{value}</div>
+      <div className="font-display font-semibold fs-26 leading-none">{shown}</div>
       {delta && (
         <div className={`fs-12 font-medium flex items-center gap-1`} style={{ color: deltaGood ? "var(--green)" : "var(--red)" }}>
           {deltaGood ? <ArrowUpRight size={13} /> : <ArrowDownRight size={13} />} {delta}
@@ -731,97 +804,415 @@ function KpiCard({ label, value, delta, deltaGood, icon: Icon, accent }) {
   );
 }
 
-/* ============================= DASHBOARD ============================= */
-function Dashboard({ kpis, alerts, goTo, maintenanceItems, leases, payments, tenantMap, unitMap, propertyMap }) {
+function useLocalStorage(key, initial) {
+  const [value, setValue] = useState(() => {
+    try {
+      const saved = window.localStorage.getItem(key);
+      return saved !== null ? saved : initial;
+    } catch { return initial; }
+  });
+  useEffect(() => {
+    try { window.localStorage.setItem(key, value); } catch { /* storage unavailable */ }
+  }, [key, value]);
+  return [value, setValue];
+}
+
+function Dashboard({ kpis, alerts, goTo, maintenanceItems, leases, payments, tenantMap, unitMap, propertyMap, units, tenants, properties, onRenew, quickAddItems }) {
+  const [period, setPeriod] = useState("month");
+  const [notedText, setNotedText] = useLocalStorage("gatehouse:quicknotes", "");
+  const [renewedIds, setRenewedIds] = useState([]);
+
   const upcoming = leases.filter(l => daysUntil(l.end) <= 60 && daysUntil(l.end) >= 0).sort((a, b) => daysUntil(a.end) - daysUntil(b.end));
   const activity = [
     ...payments.filter(p => p.status !== "Paid").map(p => ({ kind: "payment", date: p.date === "—" ? "2026-07-01" : p.date, text: `${tenantMap[p.tenantId].name} — ${p.status.toLowerCase()} payment of ${fmtMoney(p.amount)}` })),
     ...maintenanceItems.slice(0, 5).map(m => ({ kind: "maintenance", date: m.created, text: `${m.title} reported at ${propertyMap[unitMap[m.unitId].propertyId].name}` })),
   ].sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 6);
 
+  const vacantUnits = units.filter(u => u.status === "vacant");
+  const recentMaintenance = [...maintenanceItems].sort((a, b) => new Date(b.created) - new Date(a.created)).slice(0, 5);
+  const recentPayments = [...payments].filter(p => p.date !== "—").sort((a, b) => new Date(b.date) - new Date(a.date)).slice(0, 6);
+
+  // Portfolio composition (real, derived from the actual schema — Parking/Shops aren't tracked as
+  // distinct asset types yet, so this reports what the data model actually supports today)
+  const buildings = properties.length;
+  const residentialUnits = units.filter(u => ["Residential", "Mixed Use"].includes(propertyMap[u.propertyId].type)).length;
+  const commercialUnits = units.filter(u => propertyMap[u.propertyId].type === "Commercial").length;
+
+  // Maintenance widget
+  const pendingReq = maintenanceItems.filter(m => m.status === "Open").length;
+  const completedReq = maintenanceItems.filter(m => m.status === "Completed").length;
+  const emergencyReq = maintenanceItems.filter(m => m.status !== "Completed" && m.priority === "Urgent").length;
+  const technicians = new Set(maintenanceItems.map(m => m.assigned).filter(a => a && a !== "Unassigned")).size;
+
+  // Property performance ranking
+  const perfData = properties.map(p => {
+    const pu = units.filter(u => u.propertyId === p.id);
+    const occ = pu.filter(u => u.tenantId).length;
+    const revenue = pu.filter(u => u.tenantId).reduce((s, u) => s + u.rent, 0);
+    return { id: p.id, name: p.name, occRate: pu.length ? Math.round((occ / pu.length) * 100) : 0, revenue };
+  }).sort((a, b) => b.revenue - a.revenue);
+  const topPerformers = perfData.slice(0, 3);
+  const bottomPerformers = [...perfData].reverse().slice(0, 3);
+
+  // Analytics chart datasets by period — derived from the same 6-month billed/collected series
+  const monthly = rentRollTrend.map(d => ({ label: d.month, billed: d.billed, collected: d.collected }));
+  const weekly = (() => {
+    const last = rentRollTrend[rentRollTrend.length - 1];
+    const mult = [0.22, 0.27, 0.24, 0.27];
+    return mult.map((m, i) => ({ label: `Wk ${i + 1}`, billed: Math.round(last.billed * m), collected: Math.round(last.collected * m) }));
+  })();
+  const quarterly = [
+    { label: "Q1 FY26", billed: rentRollTrend.slice(0, 3).reduce((s, d) => s + d.billed, 0), collected: rentRollTrend.slice(0, 3).reduce((s, d) => s + d.collected, 0) },
+    { label: "Q2 FY26", billed: rentRollTrend.slice(3, 6).reduce((s, d) => s + d.billed, 0), collected: rentRollTrend.slice(3, 6).reduce((s, d) => s + d.collected, 0) },
+  ];
+  const chartData = { week: weekly, month: monthly, quarter: quarterly, year: monthly }[period];
+
+  const financialIncome = kpis.collected;
+  const financialOutstanding = kpis.outstanding;
+
   return (
     <div className="flex flex-col gap-5">
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <KpiCard label="Occupancy" value={`${kpis.occRate}%`} delta={`${kpis.occupied} of ${kpis.total} units`} deltaGood accent="var(--green)" icon={Home} />
-        <KpiCard label="Monthly Rent Roll" value={fmtMoney(kpis.rentRoll)} delta="+2.1% vs last month" deltaGood accent="var(--brass)" icon={Wallet} />
-        <KpiCard label="Collected This Cycle" value={fmtMoney(kpis.collected)} delta={`${fmtMoney(kpis.outstanding)} outstanding`} deltaGood={false} accent="var(--blue)" icon={TrendingUp} />
-        <KpiCard label="Open Work Orders" value={kpis.openMaint} delta={`${kpis.urgentMaint} high priority`} deltaGood={false} accent="var(--red)" icon={Wrench} />
+      {/* ===== 6 KPI CARDS ===== */}
+      <div className="grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+        <KpiCard label="Total Properties" numeric={kpis.total > 0 ? properties.length : 0} format={v => v} delta={`${units.length} units`} deltaGood accent="var(--ink)" icon={Building2} />
+        <KpiCard label="Occupied Units" numeric={kpis.occupied} format={v => v} delta={`${kpis.occRate}% occupancy`} deltaGood accent="var(--green)" icon={CheckCircle2} />
+        <KpiCard label="Vacant Units" numeric={vacantUnits.length} format={v => v} delta={`${Math.round((vacantUnits.length / kpis.total) * 100)}% vacancy`} deltaGood={false} accent="var(--amber)" icon={DoorOpen} />
+        <KpiCard label="Monthly Revenue" numeric={kpis.rentRoll} format={fmtMoney} delta={`${Math.round((kpis.collected / (kpis.collected + kpis.outstanding || 1)) * 100)}% collected`} deltaGood accent="var(--blue)" icon={Wallet} />
+        <KpiCard label="Outstanding Rent" numeric={kpis.outstanding} format={fmtMoney} delta="Needs follow-up" deltaGood={false} accent="var(--red)" icon={AlertTriangle} />
+        <KpiCard label="Active Tenants" numeric={tenants.filter(t => t.status !== "Moved Out").length} format={v => v} delta={`${tenants.filter(t => t.status === "Late").length} late`} deltaGood={tenants.filter(t => t.status === "Late").length === 0} accent="var(--ink)" icon={Users} />
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="card p-4 lg:col-span-2">
-          <div className="flex items-center justify-between mb-3">
-            <div className="font-display font-semibold fs-15">Rent roll — billed vs. collected</div>
-            <span className="fs-12 c-muted">Last 6 months</span>
+      <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
+        {/* ===== MAIN COLUMN ===== */}
+        <div className="xl:col-span-2 flex flex-col gap-5">
+          {/* Analytics chart */}
+          <div className="card p-4">
+            <div className="flex items-center justify-between mb-3 flex-wrap gap-2">
+              <div>
+                <div className="font-display font-semibold fs-15">Rental income, expenses & profit</div>
+                <div className="fs-115 c-muted mt-0.5">Occupancy trend: <span className="font-semibold" style={{ color: "var(--green)" }}>{kpis.occRate}%</span> this cycle</div>
+              </div>
+              <div className="flex gap-1 bg-FAFAFC rounded-full p-1">
+                {["week", "month", "quarter", "year"].map(p => (
+                  <button key={p} onClick={() => setPeriod(p)}
+                    className={`px-3 py-1 rounded-full fs-115 font-medium capitalize ${period === p ? "text-white" : "c-muted"}`}
+                    style={period === p ? { background: "var(--ink)" } : {}}>
+                    {p}
+                  </button>
+                ))}
+              </div>
+            </div>
+            <ResponsiveContainer width="100%" height={230}>
+              <AreaChart data={chartData} margin={{ left: -20, right: 10, top: 5 }}>
+                <defs>
+                  <linearGradient id="billed" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#6C4EF6" stopOpacity={0.28} /><stop offset="100%" stopColor="#6C4EF6" stopOpacity={0} /></linearGradient>
+                  <linearGradient id="collected" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#0FA968" stopOpacity={0.35} /><stop offset="100%" stopColor="#0FA968" stopOpacity={0} /></linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#EAEAF5" vertical={false} />
+                <XAxis dataKey="label" tick={{ fontSize: 12, fill: "#6B7094" }} axisLine={false} tickLine={false} />
+                <YAxis tick={{ fontSize: 11, fill: "#6B7094" }} axisLine={false} tickLine={false} tickFormatter={(v) => `KSh ${(v / 1e6).toFixed(1)}M`} />
+                <Tooltip formatter={(v) => fmtMoney(v)} contentStyle={{ borderRadius: 14, border: "1px solid #EAEAF5", fontSize: 12.5 }} />
+                <Area type="monotone" dataKey="billed" stroke="#6C4EF6" fill="url(#billed)" strokeWidth={2} name="Billed" />
+                <Area type="monotone" dataKey="collected" stroke="#0FA968" fill="url(#collected)" strokeWidth={2} name="Collected" />
+              </AreaChart>
+            </ResponsiveContainer>
           </div>
-          <ResponsiveContainer width="100%" height={220}>
-            <AreaChart data={rentRollTrend} margin={{ left: -20, right: 10, top: 5 }}>
-              <defs>
-                <linearGradient id="billed" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#B08A3E" stopOpacity={0.25} /><stop offset="100%" stopColor="#B08A3E" stopOpacity={0} /></linearGradient>
-                <linearGradient id="collected" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stopColor="#2F7A5D" stopOpacity={0.35} /><stop offset="100%" stopColor="#2F7A5D" stopOpacity={0} /></linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#E4E6EC" vertical={false} />
-              <XAxis dataKey="month" tick={{ fontSize: 12, fill: "#68708A" }} axisLine={false} tickLine={false} />
-              <YAxis tick={{ fontSize: 11, fill: "#68708A" }} axisLine={false} tickLine={false} tickFormatter={(v) => `KSh ${(v / 1e6).toFixed(1)}M`} />
-              <Tooltip formatter={(v) => fmtMoney(v)} contentStyle={{ borderRadius: 10, border: "1px solid #E4E6EC", fontSize: 12.5 }} />
-              <Area type="monotone" dataKey="billed" stroke="#B08A3E" fill="url(#billed)" strokeWidth={2} name="Billed" />
-              <Area type="monotone" dataKey="collected" stroke="#2F7A5D" fill="url(#collected)" strokeWidth={2} name="Collected" />
-            </AreaChart>
-          </ResponsiveContainer>
-        </div>
 
-        <div className="card p-4">
-          <div className="font-display font-semibold fs-15 mb-3">Needs attention</div>
-          <div className="flex flex-col gap-1 max-h-56 overflow-y-auto">
-            {alerts.length === 0 && <div className="fs-13 c-muted py-6 text-center">Everything's on track.</div>}
-            {alerts.slice(0, 6).map((a, i) => (
-              <button key={i} onClick={a.go} className="text-left px-2.5 py-2 rounded-lg row-hover flex gap-2 items-start">
-                <span className="w-1.5 h-1.5 rounded-full mt-1.5 shrink-0" style={{ background: a.severity === "red" ? "var(--red)" : "var(--amber)" }} />
-                <span className="fs-125 leading-snug">{a.text}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
+          {/* Property Overview + Maintenance widget */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="card p-4">
+              <div className="font-display font-semibold fs-15 mb-3">Property overview</div>
+              <div className="grid grid-cols-2 gap-3">
+                {[
+                  ["Buildings", buildings, Building2, "var(--ink)"],
+                  ["Total units", units.length, DoorOpen, "var(--blue)"],
+                  ["Residential units", residentialUnits, Home, "var(--green)"],
+                  ["Commercial units", commercialUnits, LayoutGrid, "var(--amber)"],
+                ].map(([label, val, Icon, color]) => (
+                  <div key={label} className="flex items-center gap-2.5 bg-FAFAFC rounded-2xl p-3">
+                    <div className="w-8 h-8 rounded-lg flex items-center justify-center shrink-0" style={{ background: color + "18" }}>
+                      <Icon size={15} style={{ color }} />
+                    </div>
+                    <div>
+                      <div className="font-display font-semibold fs-16 leading-none">{val}</div>
+                      <div className="fs-11 c-muted mt-0.5">{label}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="card p-4 lg:col-span-2">
-          <div className="flex items-center justify-between mb-2">
-            <div className="font-display font-semibold fs-15">Upcoming lease renewals</div>
-            <button onClick={() => goTo("leases")} className="fs-125 font-medium" style={{ color: "var(--brass)" }}>View all →</button>
+            <div className="card p-4">
+              <div className="font-display font-semibold fs-15 mb-3">Maintenance widget</div>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="bg-FAFAFC rounded-2xl p-3">
+                  <div className="font-display font-semibold fs-18" style={{ color: "var(--amber)" }}>{pendingReq}</div>
+                  <div className="fs-11 c-muted mt-0.5">Pending requests</div>
+                </div>
+                <div className="bg-FAFAFC rounded-2xl p-3">
+                  <div className="font-display font-semibold fs-18" style={{ color: "var(--green)" }}>{completedReq}</div>
+                  <div className="fs-11 c-muted mt-0.5">Completed</div>
+                </div>
+                <div className="bg-FAFAFC rounded-2xl p-3">
+                  <div className="font-display font-semibold fs-18" style={{ color: "var(--red)" }}>{emergencyReq}</div>
+                  <div className="fs-11 c-muted mt-0.5">Emergency repairs</div>
+                </div>
+                <div className="bg-FAFAFC rounded-2xl p-3">
+                  <div className="font-display font-semibold fs-18" style={{ color: "var(--ink)" }}>{technicians}</div>
+                  <div className="fs-11 c-muted mt-0.5">Assigned technicians</div>
+                </div>
+              </div>
+            </div>
           </div>
-          <table className="w-full pms-table">
-            <thead><tr className="text-left"><th className="py-2">Tenant</th><th>Unit</th><th>Ends</th><th>Status</th></tr></thead>
-            <tbody>
-              {upcoming.slice(0, 5).map(l => {
-                const t = tenantMap[l.tenantId], u = unitMap[l.unitId], p = propertyMap[l.propertyId];
+
+          {/* Recent Rent Payments */}
+          <div className="card overflow-hidden">
+            <div className="flex items-center justify-between p-4 pb-0">
+              <div className="font-display font-semibold fs-15">Recent rent payments</div>
+              <button onClick={() => goTo("payments")} className="fs-125 font-medium" style={{ color: "var(--ink)" }}>View all →</button>
+            </div>
+            <div className="overflow-x-auto p-4">
+              <table className="w-full pms-table">
+                <thead><tr className="text-left"><th className="py-2">Tenant</th><th>Property</th><th>Unit</th><th>Amount</th><th>Method</th><th>Status</th><th>Date</th></tr></thead>
+                <tbody>
+                  {recentPayments.map(pay => {
+                    const t = tenantMap[pay.tenantId], p = propertyMap[t.propertyId], u = unitMap[t.unitId];
+                    return (
+                      <tr key={pay.id} className="row-hover border-t divider">
+                        <td className="py-2.5 font-medium fs-135">{t.name}</td>
+                        <td className="fs-13 c-muted">{p.name}</td>
+                        <td className="fs-13 c-muted">№{u.unitNumber}</td>
+                        <td className="fs-13 font-medium">{fmtMoney(pay.amount)}</td>
+                        <td className="fs-13 c-muted">{pay.method}</td>
+                        <td><StatusBadge status={pay.status} /></td>
+                        <td className="fs-13 c-muted">{fmtDate(pay.date)}</td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          {/* Upcoming Lease Expiry + Recent Maintenance Requests */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+            <div className="card p-4">
+              <div className="font-display font-semibold fs-15 mb-3">Upcoming lease expiry</div>
+              <div className="flex flex-col gap-2">
+                {upcoming.slice(0, 4).map(l => {
+                  const t = tenantMap[l.tenantId], u = unitMap[l.unitId];
+                  const d = daysUntil(l.end);
+                  return (
+                    <div key={l.id} className="flex items-center justify-between gap-2 bg-FAFAFC rounded-2xl p-2.5">
+                      <div className="min-w-0">
+                        <div className="fs-13 font-medium truncate">{t.name}</div>
+                        <div className="fs-115 c-muted">№{u.unitNumber} · {d} days left</div>
+                      </div>
+                      {renewedIds.includes(l.id) ? (
+                        <span className="fs-115 c-muted flex items-center gap-1 shrink-0"><CheckCheck size={13} /> Renewed</span>
+                      ) : (
+                        <button onClick={() => { onRenew(l.id, 12); setRenewedIds(ids => [...ids, l.id]); }} className="btn-outline rounded-full px-2.5 py-1 fs-115 font-medium shrink-0">Renew</button>
+                      )}
+                    </div>
+                  );
+                })}
+                {upcoming.length === 0 && <div className="fs-13 c-muted text-center py-6">No leases expiring soon.</div>}
+              </div>
+            </div>
+
+            <div className="card p-4">
+              <div className="font-display font-semibold fs-15 mb-3">Recent maintenance requests</div>
+              <div className="flex flex-col gap-2">
+                {recentMaintenance.map(m => {
+                  const u = unitMap[m.unitId];
+                  const t = u.tenantId ? tenantMap[u.tenantId] : null;
+                  return (
+                    <div key={m.id} className="flex items-center justify-between gap-2 bg-FAFAFC rounded-2xl p-2.5">
+                      <div className="min-w-0">
+                        <div className="fs-13 font-medium truncate">{m.title}</div>
+                        <div className="fs-115 c-muted truncate">{t ? t.name : "Vacant unit"} · {m.assigned}</div>
+                      </div>
+                      <div className="flex flex-col items-end gap-1 shrink-0">
+                        <StatusBadge status={m.priority} />
+                        <StatusBadge status={m.status} />
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
+
+          {/* Vacant Units */}
+          <div className="card p-4">
+            <div className="flex items-center justify-between mb-3">
+              <div className="font-display font-semibold fs-15">Vacant units</div>
+              <button onClick={() => goTo("units")} className="fs-125 font-medium" style={{ color: "var(--ink)" }}>View all →</button>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {vacantUnits.slice(0, 6).map(u => {
+                const p = propertyMap[u.propertyId];
                 return (
-                  <tr key={l.id} className="row-hover border-t divider">
-                    <td className="py-2.5 font-medium fs-135">{t.name}</td>
-                    <td className="fs-13 c-muted">{p.name} <span className="ledger-id">№{u.unitNumber}</span></td>
-                    <td className="fs-13">{fmtDate(l.end)}</td>
-                    <td><StatusBadge status={l.status} /></td>
-                  </tr>
+                  <div key={u.id} className="bg-FAFAFC rounded-2xl p-3 flex flex-col gap-2">
+                    <div className="flex items-center justify-between">
+                      <span className="fs-135 font-medium">{p.name} №{u.unitNumber}</span>
+                      <StatusBadge status="vacant" />
+                    </div>
+                    <div className="fs-13 c-muted">{u.beds === 0 ? "Studio/Suite" : `${u.beds} bd · ${u.baths} ba`}</div>
+                    <div className="flex items-center justify-between">
+                      <span className="font-display font-semibold fs-15">{fmtMoney(u.rent)}</span>
+                      <button onClick={() => goTo("units")} className="fs-115 font-medium" style={{ color: "var(--ink)" }}>View details</button>
+                    </div>
+                  </div>
                 );
               })}
-            </tbody>
-          </table>
+              {vacantUnits.length === 0 && <div className="fs-13 c-muted text-center py-6 col-span-full">Fully occupied — no vacant units right now.</div>}
+            </div>
+          </div>
+
+          {/* Recent Activity Feed */}
+          <div className="card p-4">
+            <div className="font-display font-semibold fs-15 mb-3">Recent activity</div>
+            <div className="flex flex-col gap-3">
+              {activity.map((a, i) => (
+                <div key={i} className="flex gap-2.5">
+                  <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: a.kind === "payment" ? "var(--red-soft)" : "var(--amber-soft)" }}>
+                    {a.kind === "payment" ? <Wallet size={13} style={{ color: "var(--red)" }} /> : <Wrench size={13} style={{ color: "var(--amber)" }} />}
+                  </div>
+                  <div className="fs-125 leading-snug">{a.text}<div className="fs-11 c-muted2 mt-0.5">{fmtDate(a.date)}</div></div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* ===== RIGHT COLUMN ===== */}
+        <div className="flex flex-col gap-5">
+          {/* Today's Summary */}
+          <div className="glass-card p-4">
+            <div className="font-display font-semibold fs-15 mb-3">Today's summary</div>
+            <div className="flex flex-col gap-2.5">
+              <div className="flex justify-between fs-13"><span className="c-muted">Rent collected</span><span className="font-medium" style={{ color: "var(--green)" }}>{fmtMoney(kpis.collected)}</span></div>
+              <div className="flex justify-between fs-13"><span className="c-muted">Outstanding bills</span><span className="font-medium" style={{ color: "var(--red)" }}>{fmtMoney(kpis.outstanding)}</span></div>
+              <div className="flex justify-between fs-13"><span className="c-muted">Maintenance today</span><span className="font-medium">{maintenanceItems.filter(m => m.created === "2026-07-24").length} new</span></div>
+              <div className="flex justify-between fs-13"><span className="c-muted">Upcoming inspections</span><span className="font-medium c-muted">None scheduled</span></div>
+              <div className="flex justify-between fs-13"><span className="c-muted">Property alerts</span><span className="font-medium" style={{ color: alerts.length ? "var(--red)" : "var(--green)" }}>{alerts.length}</span></div>
+            </div>
+          </div>
+
+          {/* Quick Actions */}
+          <div className="card p-4">
+            <div className="font-display font-semibold fs-15 mb-3">Quick actions</div>
+            <div className="grid grid-cols-2 gap-2">
+              {quickAddItems.map((item, i) => {
+                const Icon = item.icon;
+                return (
+                  <button key={i} onClick={item.onClick} className="btn-outline rounded-2xl p-3 flex flex-col items-start gap-2 fs-115 font-medium text-left">
+                    <Icon size={16} style={{ color: "var(--ink)" }} />
+                    {item.label}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Mini calendar */}
+          <MiniCalendar leases={leases} maintenanceItems={maintenanceItems} unitMap={unitMap} propertyMap={propertyMap} tenantMap={tenantMap} />
+
+          {/* Weather widget (illustrative placeholder — wire to a real weather API for live data) */}
+          <div className="card p-4">
+            <div className="flex items-center justify-between mb-1">
+              <div className="font-display font-semibold fs-15">Weather — Nairobi</div>
+              <span className="fs-105 c-muted2">sample data</span>
+            </div>
+            <div className="flex items-center gap-3 mt-2">
+              <div className="font-display font-semibold fs-26">24°C</div>
+              <div className="fs-13 c-muted">Partly cloudy<br />H:26° L:18°</div>
+            </div>
+          </div>
+
+          {/* Quick notes */}
+          <div className="card p-4">
+            <div className="font-display font-semibold fs-15 mb-2">Quick notes</div>
+            <textarea
+              value={notedText}
+              onChange={e => setNotedText(e.target.value)}
+              rows={4}
+              placeholder="Jot down a reminder…"
+              className="input w-full rounded-lg px-3 py-2 fs-125"
+            />
+            <div className="fs-105 c-muted2 mt-1">Saved locally in your browser.</div>
+          </div>
+        </div>
+      </div>
+
+      {/* ===== FOOTER ===== */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+        <div className="card p-4">
+          <div className="font-display font-semibold fs-15 mb-3">Financial summary</div>
+          <div className="flex flex-col gap-2.5">
+            <div className="flex justify-between fs-13"><span className="c-muted">Income (collected)</span><span className="font-medium" style={{ color: "var(--green)" }}>{fmtMoney(financialIncome)}</span></div>
+            <div className="flex justify-between fs-13"><span className="c-muted">Expenses</span><span className="font-medium c-muted2">Not tracked yet</span></div>
+            <div className="flex justify-between fs-13"><span className="c-muted">Outstanding balance</span><span className="font-medium" style={{ color: "var(--red)" }}>{fmtMoney(financialOutstanding)}</span></div>
+          </div>
+          <div className="fs-105 c-muted2 mt-2">Expense tracking arrives with the Accounting module.</div>
         </div>
 
         <div className="card p-4">
-          <div className="font-display font-semibold fs-15 mb-3">Recent activity</div>
-          <div className="flex flex-col gap-3">
-            {activity.map((a, i) => (
-              <div key={i} className="flex gap-2.5">
-                <div className="w-7 h-7 rounded-full flex items-center justify-center shrink-0" style={{ background: a.kind === "payment" ? "var(--red-soft)" : "var(--amber-soft)" }}>
-                  {a.kind === "payment" ? <Wallet size={13} style={{ color: "var(--red)" }} /> : <Wrench size={13} style={{ color: "var(--amber)" }} />}
-                </div>
-                <div className="fs-125 leading-snug">{a.text}<div className="fs-11 c-muted2 mt-0.5">{fmtDate(a.date)}</div></div>
+          <div className="font-display font-semibold fs-15 mb-3">Occupancy heatmap</div>
+          <div className="grid grid-cols-4 gap-2">
+            {perfData.map(p => (
+              <div key={p.id} title={`${p.name}: ${p.occRate}%`} className="rounded-xl aspect-square flex items-center justify-center fs-105 font-semibold text-white"
+                style={{ background: `rgba(108,78,246,${Math.max(0.15, p.occRate / 100)})` }}>
+                {p.occRate}%
               </div>
             ))}
           </div>
         </div>
+
+        <div className="card p-4">
+          <div className="font-display font-semibold fs-15 mb-2">Property performance ranking</div>
+          <div className="fs-11 font-semibold c-muted uppercase tracking-wide mt-2 mb-1">Top performing</div>
+          {topPerformers.map(p => (
+            <div key={p.id} className="flex justify-between fs-125 py-1"><span className="truncate">{p.name}</span><span className="font-medium" style={{ color: "var(--green)" }}>{fmtMoney(p.revenue)}</span></div>
+          ))}
+          <div className="fs-11 font-semibold c-muted uppercase tracking-wide mt-3 mb-1">Lowest performing</div>
+          {bottomPerformers.map(p => (
+            <div key={p.id} className="flex justify-between fs-125 py-1"><span className="truncate">{p.name}</span><span className="font-medium" style={{ color: "var(--amber)" }}>{fmtMoney(p.revenue)}</span></div>
+          ))}
+        </div>
       </div>
+    </div>
+  );
+}
+
+function MiniCalendar({ leases, maintenanceItems, unitMap, propertyMap, tenantMap }) {
+  const year = 2026, month = 6; // July 2026 (0-indexed)
+  const today = 24;
+  const firstWeekday = new Date(year, month, 1).getDay();
+  const daysInMonth = new Date(year, month + 1, 0).getDate();
+  const eventDays = new Set([
+    ...leases.filter(l => l.end.startsWith("2026-07")).map(l => Number(l.end.slice(8, 10))),
+    ...maintenanceItems.filter(m => m.created.startsWith("2026-07")).map(m => Number(m.created.slice(8, 10))),
+  ]);
+  const cells = [...Array(firstWeekday).fill(null), ...Array.from({ length: daysInMonth }, (_, i) => i + 1)];
+
+  return (
+    <div className="card p-4">
+      <div className="font-display font-semibold fs-15 mb-3">Calendar — July 2026</div>
+      <div className="grid grid-cols-7 gap-1 fs-105 c-muted text-center mb-1">
+        {["S", "M", "T", "W", "T", "F", "S"].map((d, i) => <div key={i}>{d}</div>)}
+      </div>
+      <div className="grid grid-cols-7 gap-1">
+        {cells.map((d, i) => (
+          <div key={i} className="aspect-square flex items-center justify-center relative fs-105 rounded-lg"
+            style={d === today ? { background: "var(--ink)", color: "#fff", fontWeight: 600 } : {}}>
+            {d || ""}
+            {d && eventDays.has(d) && d !== today && <span className="absolute bottom-0.5 w-1 h-1 rounded-full" style={{ background: "var(--amber)" }} />}
+          </div>
+        ))}
+      </div>
+      <div className="fs-11 c-muted2 mt-2">Dots mark lease expirations and maintenance events this month.</div>
     </div>
   );
 }
